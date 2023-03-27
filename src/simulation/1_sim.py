@@ -39,8 +39,8 @@ class Simulator(PegasusApp):
         # Initialize the PegasusApp
         super().__init__(simulation_app, world="Default Environment")
 
-        self.num_vehicles_x = 4
-        self.num_vehicles_y = 4
+        self.num_vehicles_x = 5
+        self.num_vehicles_y = 5
         self.spacing_between_vehicles = 10.0 # meters
 
         # Random number generator without a seed
@@ -48,7 +48,7 @@ class Simulator(PegasusApp):
 
         # Where the grid of robots will be spawned
         self.elapsed_time = 0.0
-        self.sim_time = float(rgn.uniform(low=3, high=7))
+        self.sim_time = float(rgn.uniform(low=12.0, high=20.0))
         carb.log_warn("Simulation time: " + str(self.sim_time) + " seconds")
 
         # Create the vehicles and the corresponding trajectories

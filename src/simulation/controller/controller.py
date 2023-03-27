@@ -35,10 +35,10 @@ class NonlinearController(Backend):
     """
 
     def __init__(self, 
-        Kp=[10.0, 10.0, 10.0],
+        Kp=[9.0, 9.0, 9.0],
         Kd=[8.5, 8.5, 8.5],
-        Ki=[1.50, 1.50, 1.50],
-        Kr=[3.5, 3.5, 3.5],
+        Ki=[0.0, 0.0, 0.0],
+        Kr=[3.0, 3.0, 3.0],
         Kw=[0.5, 0.5, 0.5], 
         trajectory=None):
 
@@ -73,6 +73,7 @@ class NonlinearController(Backend):
         self.reveived_first_state = False
 
         # Auxiliar variables to store the data for plotting
+        self.total_samples = 0
         self.time = []
         self.p_time = []
         self.v_time = []
@@ -162,6 +163,11 @@ class NonlinearController(Backend):
         """
         Method that is used to save the data for plotting
         """
+
+        # Ignore the first sample of data
+        if self.total_samples < 3:
+            self.total_samples += 1
+            return
         
         # Save the data for plotting
         self.time.append(self.total_time)
