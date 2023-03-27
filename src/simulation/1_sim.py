@@ -19,17 +19,15 @@ simulation_app = SimulationApp({"headless": False})
 # -----------------------------------
 # The actual script should start here
 # -----------------------------------
-import omni.timeline
-from omni.isaac.core.world import World
+import numpy as np
 
 # Import the Pegasus API for simulating drones
-from pegasus.simulator.params import SIMULATION_ENVIRONMENTS
-from pegasus.simulator.logic.interface.pegasus_interface import PegasusInterface
+from pegasus.simulator.pegasus_app import PegasusApp
 
 # Import the custom python control backend
 from utils.vehicle_generator import spawn_vehicles
 
-class PegasusApp:
+class Simulator(PegasusApp):
     """
     A Template class that serves as an example on how to build a simple Isaac Sim standalone App.
     """
@@ -39,56 +37,45 @@ class PegasusApp:
         Method that initializes the PegasusApp and is used to setup the simulation environment.
         """
 
-        # Acquire the timeline that will be used to start/stop the simulation
-        self.timeline = omni.timeline.get_timeline_interface()
-
-        # Set the simulation time   
-        self.simulation_time = 50.0
-
-        # Start the Pegasus Interface
-        self.pg = PegasusInterface()
-
-        # Acquire the World, .i.e, the singleton that controls that is a one stop shop for setting up physics, 
-        # spawning asset primitives, etc.
-        self.pg._world = World(**self.pg._world_settings)
-        self.world = self.pg.world
-
-        # Launch one of the worlds provided by NVIDIA
-        self.pg.load_environment(SIMULATION_ENVIRONMENTS["Default Environment"])
+        # Initialize the PegasusApp
+        super().__init__(simulation_app, world="Default Environment")
 
         self.num_vehicles_x = 4
         self.num_vehicles_y = 4
         self.spacing_between_vehicles = 10.0 # meters
 
+        # Random number generator without a seed
+        rgn = np.random.default_rng(seed=None)
+
+        # Where the grid of robots will be spawned
+        self.elapsed_time = 0.0
+        self.sim_time = float(rgn.uniform(low=3, high=7))
+        carb.log_warn("Simulation time: " + str(self.sim_time) + " seconds")
+
         # Create the vehicles and the corresponding trajectories
-        vehicles = spawn_vehicles(self.num_vehicles_x, self.num_vehicles_y, self.spacing_between_vehicles)
+        spawn_vehicles(self.num_vehicles_x, self.num_vehicles_y, self.spacing_between_vehicles)
 
-        # Reset the simulation environment so that all articulations (aka robots) are initialized
-        self.world.reset()
-
-    def run(self):
-        """
-        Method that implements the application main loop, where the physics steps are executed.
-        """
+        # Add a callback to stop the simulaiton after a given amount of time
+        self.world.add_physics_callback('check_sim_stop', self.check_sim_stop)
 
         # Start the simulation
-        self.timeline.play()
+        self.start()
 
-        # The "infinite" loop
-        while simulation_app.is_running():
+    def check_sim_stop(self, dt):
+        """
+        Method that checks if the simulation should stop
+        """
 
-            # Update the UI of the app and perform the physics step
-            self.world.step(render=True)
-        
-        # Cleanup and stop
-        carb.log_warn("PegasusApp Simulation App is closing.")
-        self.timeline.stop()
-        simulation_app.close()
+        self.elapsed_time += dt
+
+        # Stop the simulation after self.time
+        if self.elapsed_time > self.sim_time:
+            self.stop_sim = True
 
 def main():
 
     # Instantiate the template app
-    pg_app = PegasusApp()
+    pg_app = Simulator()
 
     # Run the application loop
     pg_app.run()

@@ -12,6 +12,7 @@ can be achieved
 
 # Imports to be able to log to the terminal with fancy colors
 import carb
+import time
 
 # Imports from the Pegasus library
 from pegasus.simulator.logic.state import State
@@ -71,6 +72,22 @@ class NonlinearController(Backend):
         # Auxiliar variable, so that we only start sending motor commands once we get the state of the vehicle
         self.reveived_first_state = False
 
+        # Auxiliar variables to store the data for plotting
+        self.time = []
+        self.p_time = []
+        self.v_time = []
+        self.a_time = []
+        self.attitude_time = []     # Quaternion representation
+        self.w_time = []
+
+        self.T_ref_time = []        # Total Thrust reference
+        self.M_ref_time = []        # Total Moment reference
+        self.p_ref_time = []
+        self.v_ref_time = []
+        self.a_ref_time = []
+        self.attitude_ref_time = [] # Quaternion representation
+        self.w_ref_time = []
+
     def start(self):
         """
         Reset the control and trajectory index
@@ -84,7 +101,28 @@ class NonlinearController(Backend):
         """
         Stopping the controller. Saving the statistics data for plotting later
         """
-        return
+
+        carb.log_warn("Stopping the controller and saving the data of vehicle: " + str(self._vehicle._stage_prefix))
+
+        # Save the data to a file
+        statistics = {}
+        statistics["time"] = np.array(self.time)
+        statistics["p"] = np.vstack(self.p_time)
+        statistics["v"] = np.vstack(self.v_time)
+        statistics["a"] = np.vstack(self.a_time)
+        statistics["attitude"] = np.vstack(self.attitude_time)
+        statistics["w"] = np.vstack(self.w_time)
+
+        statistics["p_ref"] = np.vstack(self.p_ref_time)
+        statistics["v_ref"] = np.vstack(self.v_ref_time)
+        statistics["a_ref"] = np.vstack(self.a_ref_time)
+        statistics["attitude_ref"] = np.vstack(self.attitude_ref_time)
+        statistics["w_ref"] = np.vstack(self.w_ref_time)
+        statistics["T_ref"] = np.vstack(self.T_ref_time)
+        statistics["M_ref"] = np.vstack(self.M_ref_time)
+
+        np.savez(str(int(time.time())) + "_data" + str(self._vehicle._stage_prefix).replace("/World/quadrotor", '') + ".npz", **statistics)
+
 
     def update_sensor(self, sensor_type: str, data):
         """
@@ -119,6 +157,28 @@ class NonlinearController(Backend):
             A list with the target angular velocities for each individual rotor of the vehicle
         """
         return self.input_ref
+
+    def save_data(self, p_ref, v_ref, a_ref, R_ref, w_ref, T_ref, M_ref):
+        """
+        Method that is used to save the data for plotting
+        """
+        
+        # Save the data for plotting
+        self.time.append(self.total_time)
+        self.p_time.append(self.p)
+        self.v_time.append(self.v)
+        self.a_time.append(self.a)
+        self.attitude_time.append(self.R.as_quat())
+        self.w_time.append(self.w)
+
+        self.p_ref_time.append(p_ref)
+        self.v_ref_time.append(v_ref)
+        self.a_ref_time.append(a_ref)
+        self.attitude_ref_time.append(R_ref.as_quat())
+        self.w_ref_time.append(w_ref)
+        self.T_ref_time.append(T_ref)
+        self.M_ref_time.append(M_ref)
+
 
     def update(self, dt: float):
         """Method that implements the nonlinear control law and updates the target angular velocities for each rotor. 
@@ -209,6 +269,9 @@ class NonlinearController(Backend):
         # to angular velocity [rad/s] references to give to each rotor
         if self.vehicle:
             self.input_ref = self.vehicle.force_and_torques_to_velocities(u_1, tau)
+
+        # Save the data to be used for plotting
+        self.save_data(p_ref, v_ref, a_ref, Rotation.from_matrix(R_des), w_des, u_1, tau)
 
     @staticmethod
     def vee(S):
