@@ -1,10 +1,9 @@
 #!/usr/bin/env python
 """
-| File: 4_python_single_vehicle.py
-| Author: Marcelo Jacinto and Joao Pinto (marcelo.jacinto@tecnico.ulisboa.pt, joao.s.pinto@tecnico.ulisboa.pt)
-| License: BSD-3-Clause. Copyright (c) 2023, Marcelo Jacinto. All rights reserved.
-| Description: This files serves as an example on how to use the control backends API to create a custom controller 
-for the vehicle from scratch and use it to perform a simulation, without using PX4 nor ROS.
+| File: 1_sim.py
+| Author: Marcelo Jacinto, Joao Pinto, Gil Serrano, Jose Gomes
+| License: BSD-3-Clause. Copyright (c) 2023, Pegasus Research. All rights reserved.
+| Description: This files serves as generator for simulation flight data.
 """
 
 # Imports to start Isaac Sim from this script

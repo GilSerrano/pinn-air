@@ -6,6 +6,7 @@ from controller.controller import NonlinearController
 from trajectories.circle import Circle
 
 # Auxiliary scipy and numpy modules
+import time
 import numpy as np
 from scipy.spatial.transform import Rotation
 
@@ -16,7 +17,7 @@ def spawn_vehicles(num_vehicles_x, num_vehicles_y, spacing_between_vehicles):
     vehicles = []
 
     # Random number generator without a seed
-    rgn = np.random.default_rng(seed=None)
+    rgn = np.random.default_rng(seed=int(time.time()))
 
     # Where the grid of robots will be spawned
     random_xy_offset = rgn.uniform(low=-100.0, high=0.0, size=(2,))
@@ -25,7 +26,8 @@ def spawn_vehicles(num_vehicles_x, num_vehicles_y, spacing_between_vehicles):
         for j in range(num_vehicles_y):
 
             # Create the desired trajectory for the vehicle i
-            trajectory = Circle(3.0, (i * spacing_between_vehicles) +  random_xy_offset[0], (j * spacing_between_vehicles) +  random_xy_offset[1], z_axis=1.0)
+            init_angle = float(rgn.uniform(low=0, high=2*np.pi))
+            trajectory = Circle(3.0, (i * spacing_between_vehicles) +  random_xy_offset[0], (j * spacing_between_vehicles) +  random_xy_offset[1], z_axis=1.0, init_angle=init_angle)
 
             # Create the vehicle i
             # Try to spawn the selected robot in the world to the specified namespace
