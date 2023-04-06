@@ -23,7 +23,7 @@ def plot3d(x, y, z, title, xlabel, ylabel, zlabel):
 def main():
 
     # Define the filename to plot
-    filename = "_data11.npz"
+    filename = "data/1679928545_data10.npz"
 
     # Load the data
     statistics = np.load(filename)

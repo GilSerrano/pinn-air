@@ -69,19 +69,6 @@ def collate(batch):
     return motion, cond
 
 # an adapter to our collate func
-def hypermpc_collate(batch):
-    '''
-    TODO - all this needs to be adapted to match the data we have
-    for instance, position, velocity, thrust, etc., 
-    instead of inp and text and tokens'''
-    # batch.sort(key=lambda x: x[3], reverse=True)
-    adapted_batch = [{
-        'inp': torch.tensor(b[4].T).float().unsqueeze(1), # [seqlen, J] -> [J, 1, seqlen]
-        'text': b[2], #b[0]['caption']
-        'tokens': b[6],
-        'lengths': b[5],
-        'babel_text': b[7],
-    } for b in batch]
-    return collate(adapted_batch)
+
 
 
