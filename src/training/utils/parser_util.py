@@ -1,0 +1,143 @@
+from argparse import ArgumentParser
+import argparse
+import os
+import json
+
+
+# def parse_and_load_from_model(parser):
+#     # args according to the loaded model
+#     # do not try to specify them from cmd line since they will be overwritten
+#     add_data_options(parser)
+#     add_model_options(parser)
+#     add_diffusion_options(parser)
+#     args = parser.parse_args()
+#     args_to_overwrite = []
+#     for group_name in ['dataset', 'model', 'diffusion']:
+#         args_to_overwrite += get_args_per_group_name(parser, args, group_name)
+
+#     # load args from model
+#     model_path = get_model_path_from_args()
+#     args_path = os.path.join(os.path.dirname(model_path), 'args.json')
+#     assert os.path.exists(args_path), 'Arguments json file was not found!'
+#     with open(args_path, 'r') as fr:
+#         model_args = json.load(fr)
+
+#     for a in args_to_overwrite:
+#         if a in model_args.keys():
+#             setattr(args, a, model_args[a])
+
+#         elif 'cond_mode' in model_args: # backward compitability
+#             unconstrained = (model_args['cond_mode'] == 'no_cond')
+#             setattr(args, 'unconstrained', unconstrained)
+
+#         else:
+#             print('Warning: was not able to load [{}], using default value [{}] instead.'.format(a, args.__dict__[a]))
+
+#     if args.cond_mask_prob == 0:
+#         args.guidance_param = 1
+#     return args
+
+
+# def get_args_per_group_name(parser, args, group_name):
+#     for group in parser._action_groups:
+#         if group.title == group_name:
+#             group_dict = {a.dest: getattr(args, a.dest, None) for a in group._group_actions}
+#             return list(argparse.Namespace(**group_dict).__dict__.keys())
+#     return ValueError('group_name was not found.')
+
+# def get_model_path_from_args():
+#     try:
+#         dummy_parser = ArgumentParser()
+#         dummy_parser.add_argument('model_path')
+#         dummy_args, _ = dummy_parser.parse_known_args()
+#         return dummy_args.model_path
+#     except:
+#         raise ValueError('model_path argument must be specified.')
+
+
+def add_base_options(parser):
+    group = parser.add_argument_group('base')
+    group.add_argument("--cuda", default=True, type=bool, help="Use cuda device, otherwise use CPU.")
+    group.add_argument("--device", default=0, type=int, help="Device id to use.")
+    group.add_argument("--seed", default=10, type=int, help="For fixing random seed.")
+    group.add_argument("--batch_size", default=64, type=int, help="Batch size during training.")
+
+
+def add_model_options(parser):
+    group = parser.add_argument_group('model')
+    group.add_argument("--arch", default='mlp',
+                       choices=['mlp'], type=str,
+                       help="Architecture types to try.") #TODO add more architectures in the future
+    group.add_argument("--layers", default=8, type=int,
+                       help="Number of layers.")
+
+    #This comes from the base code, it's not needed for us, but should be adapted in the future
+    group.add_argument("--lambda_rcxyz", default=0.0, type=float, help="Joint positions loss.")
+    group.add_argument("--lambda_vel", default=0.0, type=float, help="Joint velocity loss.")
+    group.add_argument("--lambda_fc", default=0.0, type=float, help="Foot contact loss.")
+
+
+
+def add_data_options(parser):
+    group = parser.add_argument_group('dataset')
+    group.add_argument("--dataset", default='sim_circles', choices=['sim_circles'], type=str,
+                       help="Dataset name (choose from list).") #TODO add other datasets in the future
+    group.add_argument("--data_dir", default="", type=str,
+                       help="If empty, will use defaults according to the specified dataset.")
+
+
+def add_training_options(parser):
+    group = parser.add_argument_group('training')
+    group.add_argument("--save_dir", required=True, type=str,
+                       help="Path to save checkpoints and results.")
+    group.add_argument("--overwrite", action='store_true',
+                       help="If True, will enable to use an already existing save_dir.")
+    group.add_argument("--train_platform_type", default='NoPlatform', choices=['NoPlatform', 'ClearmlPlatform', 'TensorboardPlatform'], type=str,
+                       help="Choose platform to log results. NoPlatform means no logging.")
+    group.add_argument("--lr", default=1e-4, type=float, help="Learning rate.")
+    group.add_argument("--weight_decay", default=0.0, type=float, help="Optimizer weight decay.")
+    group.add_argument("--lr_anneal_steps", default=0, type=int, help="Number of learning rate anneal steps.")
+    group.add_argument("--eval_batch_size", default=32, type=int,
+                       help="Batch size during evaluation loop.")
+    group.add_argument("--eval_split", default='test', choices=['val', 'test'], type=str,
+                       help="Which split to evaluate on during training.")
+    group.add_argument("--eval_during_training", action='store_true',
+                       help="If True, will run evaluation during training.")
+    group.add_argument("--log_interval", default=1_000, type=int,
+                       help="Log losses each N steps")
+    group.add_argument("--save_interval", default=50_000, type=int,
+                       help="Save checkpoints and run evaluation each N steps")
+    group.add_argument("--num_steps", default=600_000, type=int,
+                       help="Training will stop after the specified number of steps.")
+    group.add_argument("--resume_checkpoint", default="", type=str,
+                       help="If not empty, will start from the specified checkpoint (path to model###.pt file).")
+
+
+def add_evaluation_options(parser):
+    group = parser.add_argument_group('eval')
+    group.add_argument("--model_path", required=True, type=str,
+                       help="Path to model####.pt file to be sampled.")
+    group.add_argument("--eval_mode", default='wo_mm', choices=['wo_mm', 'mm_short', 'debug', 'full'], type=str,
+                       help="wo_mm (t2m only) - 20 repetitions without multi-modality metric; "
+                            "mm_short (t2m only) - 5 repetitions with multi-modality metric; "
+                            "debug - short run, less accurate results."
+                            "full (a2m only) - 20 repetitions.")
+    group.add_argument("--guidance_param", default=2.5, type=float,
+                       help="For classifier-free sampling - specifies the s parameter, as defined in the paper.")
+
+
+def train_args():
+    parser = ArgumentParser()
+    add_base_options(parser)
+    add_data_options(parser)
+    add_model_options(parser)
+    add_training_options(parser)
+    return parser.parse_args()
+
+
+# def evaluation_parser():
+#     parser = ArgumentParser()
+#     # args specified by the user: (all other will be loaded from the model)
+#     add_base_options(parser)
+#     add_evaluation_options(parser)
+#     return parse_and_load_from_model(parser)
