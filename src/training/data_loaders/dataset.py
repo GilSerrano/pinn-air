@@ -5,6 +5,8 @@ from os.path import join as pjoin
 import codecs as cs
 from tqdm import tqdm
 
+# Used for padding the timeseries
+from torch.nn.utils.rnn import pad_sequence
 
 class SimDataset(data.Dataset):
     '''
@@ -13,6 +15,9 @@ class SimDataset(data.Dataset):
     '''
     
     def __init__(self, dataset_path, split, device="cpu"):
+
+        # Define the device where the data will be stored
+        self.device = device
 
         # List of the files to use for this dataset
         name_list = []
@@ -37,7 +42,12 @@ class SimDataset(data.Dataset):
 
                 # Load all the numpy arrays from the timeseries_dict and create the tensors
                 for key, value in timeseries.items():
-                    timeseries_torch[key] = torch.from_numpy(value).float().to(device)
+                    timeseries_torch[key] = torch.from_numpy(value).float().to(self.device)
+
+                    # Make sure to create an extra dimensions for the time tensor 
+                    # to make it compatible with the other tensors
+                    if key == "time":
+                        timeseries_torch[key] = timeseries_torch[key].unsqueeze(1)
 
                 # Add the data to the dataset
                 self.dataset[name] = timeseries_torch
@@ -48,7 +58,7 @@ class SimDataset(data.Dataset):
             except:
                 print("DEBUG - error in loading {}".format(name))
 
-        # Sort the data by length
+        # Sort the data by length (TODO: check if we still need this. If not, just remove it)
         self.name_list, self.length_list = zip(*sorted(zip(name_list, length_list), key=lambda x: x[1]))
 
         # Convert the lengths list to a numpy array
@@ -66,26 +76,37 @@ class SimDataset(data.Dataset):
             tuple(nn.Tensor): A tupple containing the data for the given index.
         """
 
-        # Get the name of the timeserires corresponding to the desired index
-        timeseries = self.dataset[self.name_list[index]]
-
-        # Return the individual tensors with data
-        return tuple(timeseries[key] for key in timeseries.keys())
+        # Get the timeserires corresponding to the desired index
+        return self.dataset[self.name_list[index]]
     
     @staticmethod
     def collate(batch):
         '''
         Method used to collate the data from the dataset into batches
+        Args:
+            batch (list): A list of dicts containing the timeseries to compose the batch
+        Returns:
+            tuple(nn.Tensor, nn.Tensor): A tuple containing the batch of timeseries with input of the system and the expected output
         '''
-        
-        adapted_batch = [{
-            'inp': torch.tensor(b[4].T).float().unsqueeze(1), # [seqlen, J] -> [J, 1, seqlen]
-            'text': b[2], #b[0]['caption']
-            'tokens': b[6],
-            'lengths': b[5],
-            'babel_text': b[7],
-        } for b in batch]
-        return collate(adapted_batch)
+
+        # Each timeseries contains: time (dim=1), p (dim=3), v (dim=3), a (dim=3), attitude (dim=4), w (dim=3), 
+        # p_ref (dim=3), v_ref (dim=3), a_ref (dim=3), attitude_ref (dim=3), w_ref (dim=3), T_ref (dim=1), M_ref (dim=3)
+        # In this function we want to create a tensor of dimensions (batch_size, 13, max_seq_len)
+
+        datasets = []
+
+        # Get the timeseries from the batch
+        for timeseries in batch:
+
+            # Note, this could be improved by using torch.cat with a list of tensors
+    
+            # Create a tensor with the time, p, v, a, attitude, w, p_ref, v_ref, a_ref, attitude_ref, w_ref, T_ref, M_ref
+            # of shape (37, seq_len)
+            datasets += [torch.cat([timeseries[key] for key in timeseries.keys()], dim=-1).swapaxes(0, 1)]
+            
+
+        # Return a dataset of dimensions (batch_size, 13, max_seq_len)
+        return pad_sequence(datasets, batch_first=True, padding_value=0.0)
     
 
 class SimCircles(SimDataset):
@@ -106,3 +127,11 @@ class SimCircles(SimDataset):
 
         # Check if the dataset is empty
         assert len(self.dataset) >= 1, 'You loaded an empty dataset, '
+
+
+if __name__ == "__main__":
+
+    dataset = SimCircles()
+
+    batch = [dataset[0], dataset[1]]
+    print(dataset.collate(batch).shape)

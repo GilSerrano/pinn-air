@@ -7,12 +7,15 @@ import json
 from utils.fix_seed import fixseed
 from utils.parser_util import train_args
 from data_loaders.get_data import get_dataset_loader
-FIX_SEED = True
 
+
+FIX_SEED = True
 
 def main():
     # parse arguments
     args = train_args()
+    
+    
     if FIX_SEED:
         fixseed(args.seed)
 
