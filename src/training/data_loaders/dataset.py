@@ -14,9 +14,18 @@ class SimDataset(data.Dataset):
     or include it in their parameters
     '''
     
-    def __init__(self, dataset_path, split, device="cpu"):
+    def __init__(self, dataset_path, split="train", lookback=1, device="cpu"):
+        """Initializes the Simulation dataset class
 
-        # Define the device where the data will be stored
+        Args:
+            dataset_path (str): Path to the dataset
+            split (str): If the split is the training, validation, or test split
+            lookback (int): Size of window for prediction
+            device (str, optional): _description_. Defaults to "cpu".
+        """
+
+        # Define the lookback size and the device where the data will be stored
+        self.lookback = lookback
         self.device = device
 
         # List of the files to use for this dataset
@@ -77,7 +86,25 @@ class SimDataset(data.Dataset):
         """
 
         # Get the timeserires corresponding to the desired index
-        return self.dataset[self.name_list[index]]
+        timeseries = self.dataset[self.name_list[index]]
+
+        # Create a tensor with the time, p, v, a, attitude, w, p_ref, v_ref, a_ref, attitude_ref, w_ref, T_ref, M_ref of shape (37, seq_len)
+        dataset = torch.cat([timeseries[key] for key in timeseries.keys()], dim=-1).swapaxes(0, 1)
+
+        # Create the feature and target timeseries using the desired lookback
+        x, y = [], []
+
+        for i in range(dataset.shape[-1] - self.lookback):
+            
+            feature = dataset[:, i:i+self.lookback]
+            target = dataset[:, i+1:i+self.lookback+1]
+
+            x.append(feature)
+            y.append(target)
+
+        # Convert back the list of tensors to a single tensor
+        return torch.cat(x, -1), torch.cat(y, -1)
+
     
     @staticmethod
     def collate(batch):
@@ -86,27 +113,30 @@ class SimDataset(data.Dataset):
         Args:
             batch (list): A list of dicts containing the timeseries to compose the batch
         Returns:
-            tuple(nn.Tensor, nn.Tensor): A tuple containing the batch of timeseries with input of the system and the expected output
+            tuple(nn.Tensor, nn.Tensor): A tuple containing:
+                - The batch of timeseries with input of the network 
+                - The batch of the timeseries with the expected output
         '''
 
-        # Each timeseries contains: time (dim=1), p (dim=3), v (dim=3), a (dim=3), attitude (dim=4), w (dim=3), 
-        # p_ref (dim=3), v_ref (dim=3), a_ref (dim=3), attitude_ref (dim=3), w_ref (dim=3), T_ref (dim=1), M_ref (dim=3)
+        # Each timeseries contains: 
+        # time (dim=1),                                     # time of the system
+        # p (dim=3), v (dim=3), a (dim=3),                  # position velocity and acceleration of the system
+        # attitude (dim=4), w (dim=3),                      # attitude quaternion and angular velocity of the system
+        # p_ref (dim=3), v_ref (dim=3), a_ref (dim=3),      # reference position, velocity and acceleration
+        # attitude_ref (dim=3), w_ref (dim=3),              # reference attitude quaternion and angular velocity
+        # T_ref (dim=1), M_ref (dim=3)                      # reference thrust and moment
         # In this function we want to create a tensor of dimensions (batch_size, 13, max_seq_len)
 
         datasets = []
+        expected_outputs = []
 
         # Get the timeseries from the batch
-        for timeseries in batch:
-
-            # Note, this could be improved by using torch.cat with a list of tensors
-    
-            # Create a tensor with the time, p, v, a, attitude, w, p_ref, v_ref, a_ref, attitude_ref, w_ref, T_ref, M_ref
-            # of shape (37, seq_len)
-            datasets += [torch.cat([timeseries[key] for key in timeseries.keys()], dim=-1).swapaxes(0, 1)]
-            
+        for data in batch:
+            datasets += [data[0]]
+            expected_outputs += [data[1]]
 
         # Return a dataset of dimensions (batch_size, 13, max_seq_len)
-        return pad_sequence(datasets, batch_first=True, padding_value=0.0)
+        return pad_sequence(datasets, batch_first=True, padding_value=0.0), pad_sequence(expected_outputs, batch_first=True, padding_value=0.0)
     
 
 class SimCircles(SimDataset):
@@ -114,7 +144,7 @@ class SimCircles(SimDataset):
     A wrapper class for the sim_circles dataset
     """
     
-    def __init__(self, datapath='', split="train", device="cpu"):
+    def __init__(self, datapath='', split="train", lookback=1, device="cpu"):
 
         # If no path is given, use the default path for the dataset
         if datapath == '':
@@ -123,7 +153,7 @@ class SimCircles(SimDataset):
         print('Loading dataset: ' + datapath)
 
         # Perform the actual initialization of the dataset
-        super().__init__(datapath, split, device)
+        super().__init__(datapath, split, lookback, device)
 
         # Check if the dataset is empty
         assert len(self.dataset) >= 1, 'You loaded an empty dataset, '
@@ -131,7 +161,7 @@ class SimCircles(SimDataset):
 
 if __name__ == "__main__":
 
-    dataset = SimCircles()
+    dataset = SimCircles(lookback=1)
 
     batch = [dataset[0], dataset[1]]
-    print(dataset.collate(batch).shape)
+    print(dataset.collate(batch)[0].shape)

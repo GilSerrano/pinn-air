@@ -1,18 +1,19 @@
+__all__ = ["get_dataset_loader"]
+
 from torch.utils.data import DataLoader
-from data_loaders.tensors import hypermpc_collate
+
+# Import the data models
+from training.data_loaders.dataset import SimCircles
+
+# A dicitionary of the datasets available
+datasets = {"sim_circles", SimCircles}
 
 def get_dataset_class(name):
-    if name == "sim_circles":
-        from training.data_loaders.dataset import SimCircles
-        return SimCircles
-    else:
-        raise ValueError(f'Unsupported dataset name [{name}]')
 
-def get_collate_fn(name):
-    if name in ["sim_circles"]:
-        return hypermpc_collate
-    else:
-        raise ValueError(f'Unsupported dataset name, no collate fucntion for [{name}]')
+    try:
+        return datasets[name]
+    except KeyError:
+        raise ValueError(f'Unsupported dataset name [{name}]')
 
 def get_dataset_loader(name, batch_size, datapath, split='train', device="cpu"):
     """
