@@ -1,17 +1,38 @@
+import tqdm
+import torch
 from torch.optim import AdamW
 
 class TrainLoop(object):
 
-    def __init__(self, args, model, data):
+    def __init__(self, args, model, data_iterator):
 
         # Save the model and training data
         self.model = model
-        self.data = data
+        self.data_iterator = data_iterator
 
         # Setup the Adam optimizer
         self.optimizer = AdamW(model.parameters(), lr=args.lr, weight_decay=args.weight_decay)
 
-        # Setup the learning rate scheduler
-        self.scheduler = torch.optim.lr_scheduler.StepLR(self.optimizer, step_size=args.lr_decay_step, gamma=args.lr_decay)
+        # Setup the learning rate sched   
 
         # Setup the loss function
+
+    def train(self):
+        
+
+        with torch.enable_grad():
+
+            for i, batch in tqdm(enumerate(self.data_iterator), desc="Iterating over batches"):
+
+                # Make sure we have everything in the right device
+                batch = 
+
+                # Zero the gradients
+                self.optimizer.zero_grad()
+
+                # Forward pass
+                self.model.compute_loss()
+
+
+    def test(self):
+        pass

@@ -7,17 +7,21 @@ class RNNAutoencoder(nn.Module):
     Class that defines the RNN-Autoencoder model architecture.
     """
 
-    def __init__(self, input_dim, layers=[128, 64, 32], latent_dim=1, activation='relu'):
+    def __init__(self, input_dim, layers, latent_dim, losses, activation):
         """Initializes the network class
 
         Args:
             input_dim (int): The number of inputs of the system. 
             layers (list, optional): The dimensions of fully-connected layers for the encoder and decoder. Defaults to [128, 64, 32].
             latent_dim (int, optional): The dimension of the bottleneck for generating the latent variable. Defaults to 1.
+            losses (list, optional): The list of losses to use.
             activation (str, optional): The name of the activation function. Defaults to 'relu'.
         """
         
         super(RNNAutoencoder, self).__init__()
+
+        # Save the loss functions
+        self.losses = list(losses)
 
         # Define the activation function
         activations = {'relu': F.relu, 'tanh': F.tanh, 'sigmoid': F.sigmoid}
@@ -47,9 +51,13 @@ class RNNAutoencoder(nn.Module):
             [nn.Linear(layers[0], input_dim)]
         )
 
-    def forward(self, x):
+    def forward(self, batch):
+        """
+        The batch to be processed by the network
+        """
         
         # Encode the input to bottleneck layer
+        x = batch
         for layer in self.encoder:
             x = self.activation(layer(x))
 
@@ -61,3 +69,16 @@ class RNNAutoencoder(nn.Module):
             x = self.activation(layer(x))
 
         return x
+    
+    def compute_loss(self, batch, output):
+        """
+        Computes the loss function for the network
+        """
+
+        # Compute the loss
+        loss = 0
+
+        for loss_fn, weight in self.losses:
+            loss += weight * loss_fn(batch, output)
+
+        return loss

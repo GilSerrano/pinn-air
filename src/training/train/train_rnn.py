@@ -21,7 +21,7 @@ def main():
 
     # Check the device
     if args.cuda and torch.cuda.is_available():
-        args.device = 'cuda:' + args.device
+        args.device = 'cuda:0'
 
     # Load the dataset
     data = get_dataset_loader(name=args.dataset, batch_size=args.batch_size, datapath=args.data_dir, split="train", device=args.device)
