@@ -24,7 +24,9 @@ def main():
         args.device = 'cuda:0'
 
     # Load the dataset
-    data = get_dataset_loader(name=args.dataset, batch_size=args.batch_size, datapath=args.data_dir, split="train", device=args.device)
+    train_dataloader = get_dataset_loader(name=args.dataset, batch_size=args.batch_size, datapath=args.data_dir, split="train", device=args.device)
+    validation_dataloader = get_dataset_loader(name=args.dataset, batch_size=args.batch_size, datapath=args.data_dir, split="val", device=args.device)
+    test_dataloader = get_dataset_loader(name=args.dataset, batch_size=args.batch_size, datapath=args.data_dir, split="test", device=args.device)
 
     # Create the model
     model = nn_models["rnn"](

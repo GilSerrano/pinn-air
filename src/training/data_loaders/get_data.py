@@ -3,7 +3,7 @@ __all__ = ["get_dataset_loader"]
 from torch.utils.data import DataLoader
 
 # Import the data models
-from training.data_loaders.dataset import SimCircles
+from .dataset import SimCircles
 
 # A dicitionary of the datasets available
 datasets = {"sim_circles", SimCircles}

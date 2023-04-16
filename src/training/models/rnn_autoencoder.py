@@ -1,27 +1,25 @@
 import torch.nn as nn
 import torch.nn.functional as F
 
+# The base implementation for the loss functions
+from train.losses import mse_loss, system_loss
 
 class RNNAutoencoder(nn.Module):
     """
     Class that defines the RNN-Autoencoder model architecture.
     """
 
-    def __init__(self, input_dim, layers, latent_dim, losses, activation):
+    def __init__(self, input_dim, layers, latent_dim, activation):
         """Initializes the network class
 
         Args:
             input_dim (int): The number of inputs of the system. 
             layers (list, optional): The dimensions of fully-connected layers for the encoder and decoder. Defaults to [128, 64, 32].
             latent_dim (int, optional): The dimension of the bottleneck for generating the latent variable. Defaults to 1.
-            losses (list, optional): The list of losses to use.
             activation (str, optional): The name of the activation function. Defaults to 'relu'.
         """
         
         super(RNNAutoencoder, self).__init__()
-
-        # Save the loss functions
-        self.losses = list(losses)
 
         # Define the activation function
         activations = {'relu': F.relu, 'tanh': F.tanh, 'sigmoid': F.sigmoid}
@@ -70,15 +68,15 @@ class RNNAutoencoder(nn.Module):
 
         return x
     
-    def compute_loss(self, batch, output):
+    def compute_loss(self, x, y, y_hat):
         """
         Computes the loss function for the network
+
+        Args:
+            x (torch.Tensor): The input of the network
+            y (torch.Tensor): The expected output of the network
+            y_hat (torch.Tensor): The output of the network
         """
 
-        # Compute the loss
-        loss = 0
-
-        for loss_fn, weight in self.losses:
-            loss += weight * loss_fn(batch, output)
-
-        return loss
+        # Compute the mean-square-error loss
+        return mse_loss(y, y_hat)
