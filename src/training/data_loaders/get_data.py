@@ -1,12 +1,13 @@
 __all__ = ["get_dataset_loader"]
 
+from os.path import join as pjoin
 from torch.utils.data import DataLoader
 
 # Import the data models
 from .dataset import SimCircles
 
 # A dicitionary of the datasets available
-datasets = {"sim_circles", SimCircles}
+datasets = {"sim_circles": SimCircles}
 
 def get_dataset_class(name):
 
@@ -30,10 +31,13 @@ def get_dataset_loader(name, batch_size, datapath, split='train', device="cpu"):
         Dataloader: A dataloader object that can be used to generate batches from the dataset.
     """
 
-    # Get the dataset
+    # Get the dataset class
     dataset_class = get_dataset_class(name)
-    dataset = dataset_class(split, datapath, device)
 
+    # Instantiate the Dataset Object
+    dataset = dataset_class(dataset_path=pjoin(datapath, name), split=split, lookback=1, device=device)
+
+    # Create a dataloader from the dataset (i.e. create batches from the dataset)
     loader = DataLoader(
         dataset, batch_size=batch_size, shuffle=True,
         num_workers=8, drop_last=True, collate_fn=dataset.collate

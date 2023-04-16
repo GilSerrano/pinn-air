@@ -34,6 +34,8 @@ class SimDataset(data.Dataset):
         # Path to the file containing the list of files to use for this dataset (train, test, or val)
         split_file = pjoin(dataset_path, f'{split}.txt')
 
+        print(split_file)
+
         # split file has the IDs of the sequences to be used for training or testing
         with cs.open(split_file, 'r') as f:
             name_list += [line.strip() for line in f.readlines()]
@@ -144,16 +146,16 @@ class SimCircles(SimDataset):
     A wrapper class for the sim_circles dataset
     """
     
-    def __init__(self, datapath='', split="train", lookback=1, device="cpu"):
+    def __init__(self, dataset_path='', split="train", lookback=1, device="cpu"):
 
         # If no path is given, use the default path for the dataset
-        if datapath == '':
-            datapath='./dataset/sim_circles'
+        if dataset_path == '':
+            dataset_path='./dataset/sim_circles'
             
-        print('Loading dataset: ' + datapath)
+        print('Loading dataset: ' + dataset_path)
 
         # Perform the actual initialization of the dataset
-        super().__init__(datapath, split, lookback, device)
+        super().__init__(dataset_path, split, lookback, device)
 
         # Check if the dataset is empty
         assert len(self.dataset) >= 1, 'You loaded an empty dataset, '

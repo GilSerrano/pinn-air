@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+import os
 import torch
 from models import nn_models
 from data_loaders import get_dataset_loader
@@ -24,8 +25,13 @@ def main():
         args.device = 'cuda:0'
 
     # Load the dataset
-    train_dataloader = get_dataset_loader(name=args.dataset, batch_size=args.batch_size, datapath=args.data_dir, split="train", device=args.device)
-    validation_dataloader = get_dataset_loader(name=args.dataset, batch_size=args.batch_size, datapath=args.data_dir, split="val", device=args.device)
+
+    # TODO - remove this hardcode from the dataset
+    args.dataset = "sim_circles"
+    args.data_dir = os.path.abspath("./dataset")
+
+    train_dataloader = get_dataset_loader(args.dataset, batch_size=args.batch_size, datapath=args.data_dir, split="train", device=args.device)
+    validation_dataloader = get_dataset_loader(args.dataset, batch_size=args.batch_size, datapath=args.data_dir, split="val", device=args.device)
     test_dataloader = get_dataset_loader(name=args.dataset, batch_size=args.batch_size, datapath=args.data_dir, split="test", device=args.device)
 
     # Create the model
