@@ -32,6 +32,9 @@ class TrainLoop(object):
         self.validation_mean_losses = []
         self.validation_mse = []
 
+        # Get the save directory to store the model over the epochs
+        
+
     def train(self):
         
         # Reset the list to track the mean of the losses over each epoch
@@ -47,13 +50,13 @@ class TrainLoop(object):
             # Train for the desired number of epochs
             for epoch in self.epochs:
 
+                print('Training epoch {}'.format(epoch))
+
                 # Train loss
                 train_loss = []
 
                 # Set the model to be in training mode
                 self.model.train()
-
-                print('Training epoch {}'.format(epoch))
 
                 for i, batch in tqdm(enumerate(self.train_dataloader), desc="Computing batch"):
 
@@ -69,8 +72,8 @@ class TrainLoop(object):
                     # Forward pass
                     loss = self.model.compute_loss(x, y, y_hat)
 
-                    # Add the result to the tensorboard
-                    self.writer.add_scalar("Loss/train", loss, epoch)
+                    # Save the loss of the training on this batch
+                    train_loss.append(loss)
 
                     # Backward pass
                     loss.backward()
@@ -78,26 +81,31 @@ class TrainLoop(object):
                     # Update the parameters
                     self.optimizer.step()
 
-                # Set the model to be in evaluation mode
-                self.model.eval()
+                # Compute the training loss on the epoch
+                loss_train = torch.tensor(train_loss).mean().item()
 
                 # Compute the MSE and validation loss on the validation set
                 mse, loss_val = self.validate()
-
+                
                 # Add the results to the tensorboard
+                self.writer.add_scalar("Loss/train", loss_train, epoch)
                 self.writer.add_scalar("Loss/validation", loss_val, epoch)
                 self.writer.add_scalar("MSE/validation", mse, epoch)
 
                 # Save the loss and mse on the validation set for plotting later on
+                self.train_mean_losses.append(loss_train)
                 self.validation_mean_losses.append(loss_val)
                 self.validation_mse.append(mse)
 
                 # Save the current model parameters
-                # TODO
+                self.save_model(epoch, loss_train, loss_val, mse)
 
         # Flush the writer and close it
         self.writer.flush()
         self.writer.close()
+
+        # Set the model to be in evaluation mode again
+        self.model.eval()
 
     def evaluate(self, dataloader, compute_loss=False):
         """
@@ -152,3 +160,27 @@ class TrainLoop(object):
         Compute the MSE over the test set
         """
         return self.evaluate(self.test_dataloader, compute_loss=False)
+
+    def save_model(self, epoch, train_loss, val_loss, val_mse):
+        """
+        Save the current model for later 
+
+        Args:
+            epoch (int): The current epoch number
+            train_loss (float): The training loss on the epoch
+            val_loss (float): The validation loss on the epoch
+            val_mse (float): The validation loss on the epoch
+        """
+
+        checkpoint_path = os.path.join(parameters["folder"], 'checkpoint_{:04d}.pth.tar'.format(epoch))
+        print('Saving checkpoint {}'.format(checkpoint_path))
+
+        # Save the current model
+        torch.save({
+            "epoch": epoch,
+            "train_loss": train_loss,
+            "validation_loss": val_loss,
+            "validation_mse": val_mse,
+            "model": self.model.state_dict(),
+            "optimizer": self.optimizer.state_dict()
+        }, checkpoint_path)
