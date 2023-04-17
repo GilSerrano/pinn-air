@@ -1,6 +1,7 @@
 import torch
 from tqdm import tqdm
 from torch.optim import AdamW
+from torch.utils.tensorboard import SummaryWriter
 
 from .losses import mse_loss
 
@@ -23,16 +24,19 @@ class TrainLoop(object):
         # Setup the Adam optimizer
         self.optimizer = AdamW(model.parameters(), lr=args.lr, weight_decay=args.weight_decay)
 
-    def train(self):
+        # Setup the SummaryWriter to use with tensorboard
+        self.writer = SummaryWriter()
 
-        # Set the model to be in training mode
-        self.model.train()
+    def train(self):
 
         # Enable gradient tracking
         with torch.enable_grad():
             
             # Train for the desired number of epochs
             for epoch in self.epochs:
+
+                # Set the model to be in training mode
+                self.model.train()
 
                 print('Training epoch {}'.format(epoch))
 
@@ -50,22 +54,32 @@ class TrainLoop(object):
                     # Forward pass
                     loss = self.model.compute_loss(x, y, y_hat)
 
+                    # Add the result to the tensorboard
+                    self.writer.add_scalar("Loss/train", loss, epoch)
+
                     # Backward pass
                     loss.backward()
 
                     # Update the parameters
                     self.optimizer.step()
 
-        # Set the model to be in evaluation mode
-        self.model.eval()
+                # Set the model to be in evaluation mode
+                self.model.eval()
 
-    def evaluate(self, dataloader):
+                # Compute the MSE and validation loss on the validation set
+                mse, loss_val = self.validate()
+
+        # Flush the writer and close it
+        self.writer.flush()
+        self.writer.close()
+
+    def evaluate(self, dataloader, compute_loss=False):
         """
         Evaluate the performance of the network on a given dataset
 
         Args:
             dataloader (Dataloader): A dataloader (i.e. training or validation dataloaders)
-
+            compute_loss (bool): Whether to compute the loss or not
         Returns:
             float: Mean square error over the predictions and the expected output
         """
@@ -76,6 +90,8 @@ class TrainLoop(object):
         y_pred = []
         y_true = []
 
+        loss = []
+
         # Disable gradient tracking on this section
         with torch.no_grad():
 
@@ -83,6 +99,10 @@ class TrainLoop(object):
                 
                 # Predict the output
                 y_hat = self.model(x)
+
+                # Compute the loss over the validation set
+                if compute_loss:
+                    loss.append(self.model.compute_loss(x, y, y_hat))
                 
                 # Add the prediction to the vector
                 y_pred += [y_hat]
@@ -92,17 +112,17 @@ class TrainLoop(object):
         y_pred = torch.tensor(y_pred).to(self.model.device)
         y_true = torch.tensor(y_true).to(self.model.device)
 
-        # Compute the MSE and return its value
-        return mse_loss(y_true, y_pred)
+        # Compute the MSE and return its value, along with the loss (if requested)
+        return mse_loss(y_true, y_pred), torch.tensor(loss).mean().item()
 
     def validate(self):
         """
         Compute the MSE over the validation set
         """
-        self.evaluate(self.validation_dataloader)
+        return self.evaluate(self.validation_dataloader, compute_loss=True)
 
     def test(self):
         """
         Compute the MSE over the test set
         """
-        self.evaluate(self.test_dataloader)
+        return self.evaluate(self.test_dataloader, compute_loss=False)
