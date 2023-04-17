@@ -28,12 +28,22 @@ class TrainLoop(object):
         self.writer = SummaryWriter()
 
     def train(self):
+        
+        # List to track the mean of the losses over each epoch
+        train_mean_losses = []
+        validation_mean_losses = []
+
+        # List the minimum squared error on the validation set over the epochs
+        validation_mse = []
 
         # Enable gradient tracking
         with torch.enable_grad():
             
             # Train for the desired number of epochs
             for epoch in self.epochs:
+
+                # Train loss
+                loss = []
 
                 # Set the model to be in training mode
                 self.model.train()
@@ -68,6 +78,13 @@ class TrainLoop(object):
 
                 # Compute the MSE and validation loss on the validation set
                 mse, loss_val = self.validate()
+
+                # Save the loss and mse on the validation set for plotting later on
+                validation_mean_losses.append(loss_val)
+                validation_mse.append(mse)
+
+                # Save the current model parameters
+                
 
         # Flush the writer and close it
         self.writer.flush()
