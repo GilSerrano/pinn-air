@@ -1,10 +1,11 @@
 #!/usr/bin/env python
 import os
 import torch
-from dynamics.discrete_multirotor import DiscreteMultirotor
-from models.rnn_autoencoder import RNNAutoencoder
-from data_loaders import get_dataset_loader
 from train.train_loop import TrainLoop
+from models.rnn_autoencoder import RNNAutoencoder
+from dynamics.discrete_multirotor import DiscreteMultirotor
+
+from data_loaders import get_dataset_loader
 from utils import fix_seed, train_args, check_save_directory
 
 def main():
@@ -21,8 +22,9 @@ def main():
     # Import the data loaders
     check_save_directory(args)
 
-    # Check the device
+    # Check the device and set the default
     args.device = 'cuda:0' if args.cuda and torch.cuda.is_available() else 'cpu'
+    torch.set_default_device(args.device)
 
     # Load the dataset
     # --------------------------------------------
@@ -39,7 +41,7 @@ def main():
     #        Output of the network (x[k+1]=[p,v,R]) (10,)
     
     # Create the multirotor model (used in the loss function to learn the known physics of the model
-    multirotor_model = DiscreteMultirotor(Ts=0.01, mass=1.5) # System sampling period (s), Mass of the vehicle (without payload) Kg
+    multirotor_model = DiscreteMultirotor(Ts=0.01, mass=1.5, device=args.device) # System sampling period (s), Mass of the vehicle (without payload) Kg
 
     # Create the RNN autoencoder model
     model = RNNAutoencoder(

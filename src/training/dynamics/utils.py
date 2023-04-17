@@ -6,16 +6,24 @@ https://github.com/facebookresearch/pytorch3d/blob/main/pytorch3d/transforms/rot
 """
 import torch
 
-def quaternion_to_matrix(quaternions: torch.Tensor) -> torch.Tensor:
+def quaternion_to_matrix(quaternions_: torch.Tensor) -> torch.Tensor:
     """
     Convert rotations given as quaternions to rotation matrices.
 
     Args:
-        quaternions: quaternions with real part first,
+        quaternions: quaternions with real part last, i.e [qx, qy, qz, qw],
             as tensor of shape (..., 4).
     Returns:
         Rotation matrices as tensor of shape (..., 3, 3).
     """
+
+    # Swap the quaternion coordinates so that we have [qw, qx, qy, qz]
+    quaternions = torch.empty_like(quaternions_)
+    quaternions[..., 0] = quaternions_[3]
+    quaternions[..., 1] = quaternions_[0]
+    quaternions[..., 2] = quaternions_[1]
+    quaternions[..., 3] = quaternions_[2]
+
     r, i, j, k = torch.unbind(quaternions, -1)
     # pyre-fixme[58]: `/` is not supported for operand types `float` and `Tensor`.
     two_s = 2.0 / (quaternions * quaternions).sum(-1)

@@ -1,5 +1,5 @@
 import torch
-
+from .utils import quaternion_to_matrix
 
 class DiscreteMultirotor:
     """
@@ -7,25 +7,29 @@ class DiscreteMultirotor:
     with rotations
     """
 
-    def __init__(self, Ts: float, mass: float):
+    def __init__(self, Ts: float, mass: float, device="cpu"):
         """
         Constructor of the DiscreteMultirotor
 
         Args:
             Ts (float): The sampling period (in s)
             mass (float): The mass of the vehicle (in Kg)
+            device (str): The device where the computations will be run
         """
+
+        self.device = device
+
         self.Ts = Ts
         self.m = mass
-        self.g = torch.Tensor([0.0, 0.0, -9.81]).unsqueeze(-1)  # [3x1] vector
+        self.g = torch.Tensor([0.0, 0.0, -9.81], device=device).unsqueeze(-1)  # [3x1] vector
 
         # Model for the linear dynamics of the vehicle
         # Note: since we have X \in R^6, i.e. X=[x,y,z,v_x,v_y,v_z]
         # so we need to use the kronecker product to expand this
         A_star = torch.tensor([[1.0,  Ts],
-                               [0.0, 1.0]])
+                               [0.0, 1.0]], device=device)
         
-        B_star = torch.tensor([(Ts ** 2.0) / 2.0, Ts]).unsqueeze(-1)
+        B_star = torch.tensor([(Ts ** 2.0) / 2.0, Ts], device=device).unsqueeze(-1)
 
         # ---------------------------------
         # X[k+1] = Ax[k] + Bu[k] 
@@ -34,14 +38,12 @@ class DiscreteMultirotor:
         # ---------------------------------
         
         # The "A" matrix of the dynamic model for the linear dynamics
-        self.A = torch.kron(A_star, torch.eye(3, 3))
+        self.A = torch.kron(A_star, torch.eye(3, 3).to(device))
 
         # The "B" matrix of the dynamic model for the linear dynamics        
-        self.B = torch.kron(B_star, torch.eye(3,3))
+        self.B = torch.kron(B_star, torch.eye(3,3).to(device))
 
         # Compute the u[k] of our model from Fref[k] (the total thrust in N at time step k)
-        self.
-    
 
     def run(self, x: torch.Tensor, u: torch.Tensor):
         """
@@ -50,8 +52,9 @@ class DiscreteMultirotor:
 
         Args:
             x (torch.Tensor): The state of the system at the previous time-step, i.e. x[k-1]
+                x[k-1] = [x,y,z | v_x, v_y,v_z | q_x, q_y, q_z, q_w]
             u (torch.Tensor): The input of the system at the current time-step, i.e. u[k]
-
+                u[k] = [w_x, w_y, w_z | T]  
         Returns:
             torch.Tensor: The state of the system at the current time-step, i.e. x[k]
         """
@@ -59,12 +62,43 @@ class DiscreteMultirotor:
         # -----------------------------------------------------
         # Compute the input of the system for the linear motion
         # -----------------------------------------------------
-        u_k = self.g + ((1.0 / self.m) * )
+
+        # TODO - check if the quaternion to matrix conversion is correct!
+        
+        # 1) Convert the quaternion to a rotation matrix (this can be simplified) 
+        # Note that we receive the quaternion in the [qx, qx, qy, qw] convention
+        rot = quaternion_to_matrix(x[..., 6:10])
+
+        # 2) Compute the reference linear acceleration that the linear system is supposed to track
+        u_k = self.g + ((1.0 / self.m) * rot * torch.tensor([0.0, 0.0, u[..., 3]], device=self.device))
+
+        # 3) Compute the reference state x[k+1] = A x[k] + B u[k]
+        new_x = self.A * x[..., 0:6] + self.B * u_k
 
         # -----------------------------------------------------
         # Compute the rotational motion update 
         # -----------------------------------------------------
 
+
+        # -----------------------------------------------------
+        # Concatenate both into a new state vector
+        # -----------------------------------------------------
+        
+
+
+
+    @staticmethod
+    def skew_symmetric(x: torch.Tensor, device="cpu") -> torch.Tensor:
+        """Method that given a (3x1) vector computes the corresponding
+        skew-symmetric matrix.
+
+        Args:
+            x (torch.Tensor): A 3x1 vector
+            device (str): The device to store the tensor
+        """
+        return torch.Tensor([[ 0.0, -x[2],  x[1]],
+                             [ x[2],  0.0, -x[0]],
+                             [-x[1], x[0],  0.0]], device=device)
     
 
 
