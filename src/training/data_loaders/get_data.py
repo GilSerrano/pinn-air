@@ -1,5 +1,6 @@
 __all__ = ["get_dataset_loader"]
 
+from os import cpu_count
 from os.path import join as pjoin
 from torch.utils.data import DataLoader
 
@@ -10,7 +11,6 @@ from .dataset import SimCircles
 datasets = {"sim_circles": SimCircles}
 
 def get_dataset_class(name):
-
     try:
         return datasets[name]
     except KeyError:
@@ -39,8 +39,12 @@ def get_dataset_loader(name, batch_size, datapath, split='train', device="cpu"):
 
     # Create a dataloader from the dataset (i.e. create batches from the dataset)
     loader = DataLoader(
-        dataset, batch_size=batch_size, shuffle=False,
-        num_workers=8, drop_last=True, collate_fn=dataset.collate 
+        dataset,                        # The dataset itself
+        batch_size=batch_size,          # The size of each batch
+        shuffle=False,                  # Whether to shuffle the sequences on the dataset
+        num_workers=cpu_count(),        # The number of cpu to use to load the dataset and generate the batches in parallel
+        drop_last=False,                # Drop the last samples if not enough to make a batch of the desired size
+        collate_fn=dataset.collate      # Custom collate function for the dataset
     )
 
     return loader

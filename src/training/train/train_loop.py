@@ -1,4 +1,4 @@
-import tqdm
+from tqdm import tqdm
 import torch
 from torch.optim import AdamW
 
@@ -30,9 +30,10 @@ class TrainLoop(object):
             
             # Train for the desired number of epochs
             for epoch in self.epochs:
+
                 print('Training epoch {}'.format(epoch))
 
-                for i, batch in tqdm(enumerate(self.data_iterator), desc="Iterating over batches"):
+                for i, batch in tqdm(enumerate(self.train_dataloader), desc="Computing batch"):
 
                     # Get the input of the network and the expect output from the batch
                     x, y = batch
