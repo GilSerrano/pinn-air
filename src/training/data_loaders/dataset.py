@@ -91,7 +91,10 @@ class SimDataset(data.Dataset):
         timeseries = self.dataset[self.name_list[index]]
 
         # Create a tensor with the time, p, v, a, attitude, w, p_ref, v_ref, a_ref, attitude_ref, w_ref, T_ref, M_ref of shape (37, seq_len)
-        dataset = torch.cat([timeseries[key] for key in timeseries.keys()], dim=-1).swapaxes(0, 1)
+        #dataset = torch.cat([timeseries[key] for key in timeseries.keys()], dim=-1).swapaxes(0, 1)
+
+        # Only get the states that we really care about (x[k]=[p,v,R], u[k]=[w_ref, T_ref])
+        dataset = torch.cat([timeseries["p"], timeseries["v"], timeseries["attitude"], timeseries["w_ref"], timeseries["T_ref"]], dim=-1).swapaxes(0, 1)
 
         # Create the feature and target timeseries using the desired lookback
         x, y = [], []
@@ -99,7 +102,7 @@ class SimDataset(data.Dataset):
         for i in range(dataset.shape[-1] - self.lookback):
             
             feature = dataset[:, i:i+self.lookback]
-            target = dataset[:, i+1:i+self.lookback+1]
+            target = dataset[0:10, i+1:i+self.lookback+1]         # we only need at the output the p[k+1], v[k+1], R[k+1] (3+3+4)
 
             x.append(feature)
             y.append(target)
@@ -137,7 +140,7 @@ class SimDataset(data.Dataset):
             datasets += [data[0]]
             expected_outputs += [data[1]]
 
-        # Return a dataset of dimensions (batch_size, 13, max_seq_len)
+        # Return a dataset of dimensions (batch_size, 14, max_seq_len), (batch_size, 10, max_seq_len)
         return pad_sequence(datasets, batch_first=True, padding_value=0.0), pad_sequence(expected_outputs, batch_first=True, padding_value=0.0)
     
 
@@ -166,4 +169,4 @@ if __name__ == "__main__":
     dataset = SimCircles(lookback=1)
 
     batch = [dataset[0], dataset[1]]
-    print(dataset.collate(batch)[0].shape)
+    print(dataset.collate(batch)[1].shape)

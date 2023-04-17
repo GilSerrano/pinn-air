@@ -9,11 +9,12 @@ class RNNAutoencoder(nn.Module):
     Class that defines the RNN-Autoencoder model architecture.
     """
 
-    def __init__(self, input_dim, layers, latent_dim, activation, device="cpu"):
+    def __init__(self, input_dim, output_dim, layers, latent_dim, activation, device="cpu"):
         """Initializes the network class
 
         Args:
             input_dim (int): The number of inputs of the system. 
+            output_dim (int): The number of outputs of the system.
             layers (list, optional): The dimensions of fully-connected layers for the encoder and decoder. Defaults to [128, 64, 32].
             latent_dim (int, optional): The dimension of the bottleneck for generating the latent variable. Defaults to 1.
             activation (str, optional): The name of the activation function. Defaults to 'relu'.
@@ -49,7 +50,7 @@ class RNNAutoencoder(nn.Module):
         self.decoder = nn.ModuleList(
             [nn.Linear(latent_dim, layers[-1])] +
             [nn.Linear(layers[i], layers[i-1]) for i in range(len(layers)-1, 0, -1)] +
-            [nn.Linear(layers[0], input_dim)]
+            [nn.Linear(layers[0], output_dim)]
         )
 
     def forward(self, batch):
@@ -82,4 +83,4 @@ class RNNAutoencoder(nn.Module):
         """
 
         # Compute the mean-square-error loss
-        return mse_loss(y, y_hat)
+        return mse_loss(y, y_hat) + system_loss()
