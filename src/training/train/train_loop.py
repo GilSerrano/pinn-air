@@ -27,14 +27,19 @@ class TrainLoop(object):
         # Setup the SummaryWriter to use with tensorboard
         self.writer = SummaryWriter()
 
+        # Metrics to save during training as a function of the epochs
+        self.train_mean_losses = []
+        self.validation_mean_losses = []
+        self.validation_mse = []
+
     def train(self):
         
-        # List to track the mean of the losses over each epoch
-        train_mean_losses = []
-        validation_mean_losses = []
+        # Reset the list to track the mean of the losses over each epoch
+        self.train_mean_losses = []
+        self.validation_mean_losses = []
 
-        # List the minimum squared error on the validation set over the epochs
-        validation_mse = []
+        # Reset the list the minimum squared error on the validation set over the epochs
+        self.validation_mse = []
 
         # Enable gradient tracking
         with torch.enable_grad():
@@ -43,7 +48,7 @@ class TrainLoop(object):
             for epoch in self.epochs:
 
                 # Train loss
-                loss = []
+                train_loss = []
 
                 # Set the model to be in training mode
                 self.model.train()
@@ -79,12 +84,16 @@ class TrainLoop(object):
                 # Compute the MSE and validation loss on the validation set
                 mse, loss_val = self.validate()
 
+                # Add the results to the tensorboard
+                self.writer.add_scalar("Loss/validation", loss_val, epoch)
+                self.writer.add_scalar("MSE/validation", mse, epoch)
+
                 # Save the loss and mse on the validation set for plotting later on
-                validation_mean_losses.append(loss_val)
-                validation_mse.append(mse)
+                self.validation_mean_losses.append(loss_val)
+                self.validation_mse.append(mse)
 
                 # Save the current model parameters
-                
+                # TODO
 
         # Flush the writer and close it
         self.writer.flush()
