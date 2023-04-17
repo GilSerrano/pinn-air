@@ -1,10 +1,9 @@
 import torch
-from .utils import quaternion_to_matrix
+from .utils import quaternion_to_matrix, matrix_to_quaternion
 
 class DiscreteMultirotor:
     """
-    Class that implements the dynamics of a discrete multirotor system
-    with rotations
+    Class that implements the dynamics of a discrete multirotor model
     """
 
     def __init__(self, Ts: float, mass: float, device="cpu"):
@@ -45,7 +44,7 @@ class DiscreteMultirotor:
 
         # Compute the u[k] of our model from Fref[k] (the total thrust in N at time step k)
 
-    def run(self, x: torch.Tensor, u: torch.Tensor):
+    def run(self, x: torch.Tensor, u: torch.Tensor) -> torch.Tensor:
         """
         Equation that describes the discrete state-space equations of a multirotor
         operating in 3D space.
@@ -79,26 +78,34 @@ class DiscreteMultirotor:
         # Compute the rotational motion update 
         # -----------------------------------------------------
 
+        # 1) Compute the skew-symmetric matrix
+        skew = self.skew_symmetric(u[..., 0:3])
+
+        # 2) Compute the new rotation matrix R[k+1]
+        new_R = rot * torch.matrix_exp(self.Ts * skew)
+
+        # 3) Generate the new quaternion from the rotation matrix
+        # Note that we produce a quaternion in the [qx, qy, qz, qw] convention
+
+        # TODO - check if the matrix to quaternion conversion is correct!
+        new_q = matrix_to_quaternion(new_R)
 
         # -----------------------------------------------------
         # Concatenate both into a new state vector
         # -----------------------------------------------------
-        
-
-
+        return torch.cat([new_x, new_q], -1)
 
     @staticmethod
-    def skew_symmetric(x: torch.Tensor, device="cpu") -> torch.Tensor:
+    def skew_symmetric(x: torch.Tensor) -> torch.Tensor:
         """Method that given a (3x1) vector computes the corresponding
         skew-symmetric matrix.
 
         Args:
             x (torch.Tensor): A 3x1 vector
-            device (str): The device to store the tensor
         """
-        return torch.Tensor([[ 0.0, -x[2],  x[1]],
-                             [ x[2],  0.0, -x[0]],
-                             [-x[1], x[0],  0.0]], device=device)
+        return torch.Tensor([[  0.0, -x[2],  x[1]],
+                             [ x[2],   0.0, -x[0]],
+                             [-x[1],  x[0],   0.0]], device=x.device)
     
 
 

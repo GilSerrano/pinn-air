@@ -60,7 +60,7 @@ def matrix_to_quaternion(matrix: torch.Tensor) -> torch.Tensor:
     Args:
         matrix: Rotation matrices as tensor of shape (..., 3, 3).
     Returns:
-        quaternions with real part first, as tensor of shape (..., 4).
+        quaternions with real part last, as tensor of shape (..., 4).
     """
     if matrix.size(-1) != 3 or matrix.size(-2) != 3:
         raise ValueError(f"Invalid rotation matrix shape {matrix.shape}.")
@@ -107,8 +107,14 @@ def matrix_to_quaternion(matrix: torch.Tensor) -> torch.Tensor:
     quat_candidates = quat_by_rijk / (2.0 * q_abs[..., None].max(flr))
 
     # if not for numerical problems, quat_candidates[i] should be same (up to a sign),
-    # forall i; we pick the best-conditioned one (with the largest denominator)
+    # forall i; we pick the best-conditioned one (with the largest denominator). This quaternions comes in the [qw, qx, qy, qz] standard
+    quat = quat_candidates[F.one_hot(q_abs.argmax(dim=-1), num_classes=4) > 0.5, :].reshape(batch_dim + (4,))
 
-    return quat_candidates[
-        F.one_hot(q_abs.argmax(dim=-1), num_classes=4) > 0.5, :
-    ].reshape(batch_dim + (4,))
+    # Swap the quaternion coordinates so that we have [qx, qy, qz, qw]
+    quaternions = torch.empty_like(quat)
+    quaternions[..., 0] = quat[1]
+    quaternions[..., 1] = quat[2]
+    quaternions[..., 2] = quat[3]
+    quaternions[..., 3] = quat[0]
+
+    return quaternions
