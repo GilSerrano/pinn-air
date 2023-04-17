@@ -1,6 +1,7 @@
 import torch
 from tqdm import tqdm
 from torch.optim import AdamW
+from os.path import join as pjoin
 from torch.utils.tensorboard import SummaryWriter
 
 from .losses import mse_loss
@@ -33,7 +34,7 @@ class TrainLoop(object):
         self.validation_mse = []
 
         # Get the save directory to store the model over the epochs
-        
+        self.save_dir = args.save_dir
 
     def train(self):
         
@@ -172,7 +173,7 @@ class TrainLoop(object):
             val_mse (float): The validation loss on the epoch
         """
 
-        checkpoint_path = os.path.join(parameters["folder"], 'checkpoint_{:04d}.pth.tar'.format(epoch))
+        checkpoint_path = pjoin(self.save_dir, 'checkpoint_{:04d}.pth.tar'.format(epoch))
         print('Saving checkpoint {}'.format(checkpoint_path))
 
         # Save the current model

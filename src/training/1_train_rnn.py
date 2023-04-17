@@ -46,7 +46,13 @@ def main():
 
     # Train the model
     print("Training...")
-    TrainLoop(args, model, train_dataloader, validation_dataloader).train()
+    training_loop = TrainLoop(args, model, train_dataloader, validation_dataloader)
+    training_loop.train()
+
+    # Test the model
+    print("Testing...")
+    test_loop = training_loop.test()
+
 
 
 if __name__ == "__main__":
