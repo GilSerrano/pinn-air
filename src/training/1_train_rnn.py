@@ -21,11 +21,9 @@ def main():
     check_save_directory(args)
 
     # Check the device
-    if args.cuda and torch.cuda.is_available():
-        args.device = 'cuda:0'
+    args.device = 'cuda:0' if args.cuda and torch.cuda.is_available() else 'cpu'
 
     # Load the dataset
-
     # TODO - remove this hardcode from the dataset
     args.dataset = "sim_circles"
     args.data_dir = os.path.abspath("./dataset")
@@ -35,19 +33,20 @@ def main():
     test_dataloader = get_dataset_loader(name=args.dataset, batch_size=args.batch_size, datapath=args.data_dir, split="test", device=args.device)
 
     # Create the model
-    model = nn_models["rnn"](
-        input_dim=data.dataset.input_dim, 
+    model = nn_models["rnn_autoencoder"](
+        input_dim=10,               # TODO - change this dimension
         layers=[128, 64, 32], 
         latent_dim=10, 
-        activation="relu"
-    ).to(args.device)
+        activation="relu",
+        device=args.device
+    )
 
     # Print the total number of parameters of the model
-    print('Total params: %.2fM' % (sum(p.numel() for p in model.parameters_wo_clip()) / 1000000.0))
+    print('Total params: %.2fM' % (sum(p.numel() for p in model.parameters()) / 1000000.0))
 
     # Train the model
     print("Training...")
-    TrainLoop(args, model, data).run_loop()
+    TrainLoop(args, model, train_dataloader, validation_dataloader).run_loop()
 
 
 if __name__ == "__main__":

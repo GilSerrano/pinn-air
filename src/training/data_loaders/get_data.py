@@ -39,8 +39,8 @@ def get_dataset_loader(name, batch_size, datapath, split='train', device="cpu"):
 
     # Create a dataloader from the dataset (i.e. create batches from the dataset)
     loader = DataLoader(
-        dataset, batch_size=batch_size, shuffle=True,
-        num_workers=8, drop_last=True, collate_fn=dataset.collate
+        dataset, batch_size=batch_size, shuffle=False,
+        num_workers=8, drop_last=True, collate_fn=dataset.collate 
     )
 
     return loader

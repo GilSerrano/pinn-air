@@ -15,7 +15,7 @@ class TrainLoop(object):
         self.validation_dataloader = validation_dataloader
 
         # Setup the number of epochs for the training
-        self.epochs = args.num_steps
+        self.epochs = torch.arange(1, args.num_steps + 1)
 
         # Setup the Adam optimizer
         self.optimizer = AdamW(model.parameters(), lr=args.lr, weight_decay=args.weight_decay)
@@ -27,26 +27,30 @@ class TrainLoop(object):
 
         # Enable gradient tracking
         with torch.enable_grad():
+            
+            # Train for the desired number of epochs
+            for epoch in self.epochs:
+                print('Training epoch {}'.format(epoch))
 
-            for i, batch in tqdm(enumerate(self.data_iterator), desc="Iterating over batches"):
+                for i, batch in tqdm(enumerate(self.data_iterator), desc="Iterating over batches"):
 
-                # Get the input of the network and the expect output from the batch
-                x, y = batch
+                    # Get the input of the network and the expect output from the batch
+                    x, y = batch
 
-                # Perform a forward pass
-                y_hat = self.model(x)
+                    # Perform a forward pass
+                    y_hat = self.model(x)
 
-                # Zero the gradients
-                self.optimizer.zero_grad()
+                    # Zero the gradients
+                    self.optimizer.zero_grad()
 
-                # Forward pass
-                loss = self.model.compute_loss(x, y, y_hat)
+                    # Forward pass
+                    loss = self.model.compute_loss(x, y, y_hat)
 
-                # Backward pass
-                loss.backward()
+                    # Backward pass
+                    loss.backward()
 
-                # Update the parameters
-                self.optimizer.step()
+                    # Update the parameters
+                    self.optimizer.step()
 
         # Set the model to be in evaluation mode
         self.model.eval()

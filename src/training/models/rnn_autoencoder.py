@@ -9,7 +9,7 @@ class RNNAutoencoder(nn.Module):
     Class that defines the RNN-Autoencoder model architecture.
     """
 
-    def __init__(self, input_dim, layers, latent_dim, activation):
+    def __init__(self, input_dim, layers, latent_dim, activation, device="cpu"):
         """Initializes the network class
 
         Args:
@@ -20,6 +20,9 @@ class RNNAutoencoder(nn.Module):
         """
         
         super(RNNAutoencoder, self).__init__()
+
+        # Set the device to run the network train and inference
+        self.device = device
 
         # Define the activation function
         activations = {'relu': F.relu, 'tanh': F.tanh, 'sigmoid': F.sigmoid}
