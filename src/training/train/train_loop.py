@@ -58,7 +58,7 @@ class TrainLoop(object):
                 # Set the model to be in training mode
                 self.model.train()
 
-                for i, batch in tqdm(enumerate(self.train_dataloader), desc="Computing batch"):
+                for batch in tqdm(self.train_dataloader, desc="Computing batch"):
 
                     # Get the input of the network and the expect output from the batch
                     x, y = batch

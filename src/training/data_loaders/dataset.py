@@ -48,7 +48,7 @@ class SimDataset(data.Dataset):
         for name in tqdm(name_list):
             try:
                 # Load the data from the file
-                timeseries = np.load(pjoin(dataset_path, 'data', name + '.npz'))
+                timeseries = np.load(pjoin(dataset_path, 'data', name))
                 timeseries_torch = {}
 
                 # Load all the numpy arrays from the timeseries_dict and create the tensors
@@ -128,7 +128,7 @@ class SimDataset(data.Dataset):
         # p (dim=3), v (dim=3), a (dim=3),                  # position velocity and acceleration of the system
         # attitude (dim=4), w (dim=3),                      # attitude quaternion and angular velocity of the system
         # p_ref (dim=3), v_ref (dim=3), a_ref (dim=3),      # reference position, velocity and acceleration
-        # attitude_ref (dim=3), w_ref (dim=3),              # reference attitude quaternion and angular velocity
+        # attitude_ref (dim=4), w_ref (dim=3),              # reference attitude quaternion and angular velocity
         # T_ref (dim=1), M_ref (dim=3)                      # reference thrust and moment
 
         # In this function we want to create a tensor of dimensions (batch_size, max_seq_len, 13)
