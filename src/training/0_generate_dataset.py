@@ -34,8 +34,8 @@ path_mocap_14_04_2023_dataset = "./dataset/mocap_14_04_2023"
 
 generate_split(
     dataset_path=path_mocap_14_04_2023_dataset,
-    percentage_train=0.6,
-    percentage_validation=0.2,
-    percentage_test=0.2,
+    percentage_train=1.0,
+    percentage_validation=0.0,
+    percentage_test=0.0,
     extension=".npz"
 )

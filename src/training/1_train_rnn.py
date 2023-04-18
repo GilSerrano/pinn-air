@@ -31,13 +31,14 @@ def main():
     # TODO - remove this hardcode from the dataset
     # --------------------------------------------
     args.dataset = "sim_circles"
+    #args.dataset = "mocap_14_04_2023"
     args.data_dir = os.path.abspath("./dataset")
 
     train_dataloader = get_dataset_loader(args.dataset, batch_size=args.batch_size, datapath=args.data_dir, split="train", device=args.device)
     validation_dataloader = get_dataset_loader(args.dataset, batch_size=args.batch_size, datapath=args.data_dir, split="val", device=args.device)
     test_dataloader = get_dataset_loader(name=args.dataset, batch_size=args.batch_size, datapath=args.data_dir, split="test", device=args.device)
 
-    # NOTES: Input of the network (x[k]=[p,v,R], u[k]=[w_ref, T_ref]) (14,)
+    # NOTES: Input of the network  (x[k]=[p,v,R], u[k]=[w_ref, T_ref]) (14,)
     #        Output of the network (x[k+1]=[p,v,R]) (10,)
     
     # Create the multirotor model (used in the loss function to learn the known physics of the model

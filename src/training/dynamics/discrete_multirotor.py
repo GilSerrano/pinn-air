@@ -72,8 +72,7 @@ class DiscreteMultirotor:
         total_thrust[..., 2] = u[..., 3]                    # Vectors of the type (batch_size, time_sequence, [0.0, 0.0, total_thrust])
 
         # 2) Compute the reference linear acceleration that the linear system is supposed to track
-        u_k = (1.0 / self.m) * torch.matmul(rot, total_thrust[..., None]).squeeze() + self.g        # (batch_size, time_sequence, 3)
-
+        u_k = (1.0 / self.m) * torch.matmul(rot, total_thrust[..., None]).squeeze(dim=-1) + self.g        # (batch_size, time_sequence, 3)
 
         # dimensions of self.A =(6=i,6=j) | X=(batch_size=b, time_sequence=t, 6=j) -> (b, t, i)
         # dimensions of self.B =(6=i, 3=j) | U=(batch_size=b, time_sequence=t, 3=j)

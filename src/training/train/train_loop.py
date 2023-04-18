@@ -60,14 +60,14 @@ class TrainLoop(object):
 
                 for batch in tqdm(self.train_dataloader, desc="Computing batch"):
 
+                    # Zero the gradients
+                    self.optimizer.zero_grad()
+
                     # Get the input of the network and the expect output from the batch
                     x, y = batch
 
                     # Perform a forward pass
                     y_hat = self.model(x)
-
-                    # Zero the gradients
-                    self.optimizer.zero_grad()
 
                     # Forward pass
                     loss = self.model.compute_loss(x, y, y_hat)
