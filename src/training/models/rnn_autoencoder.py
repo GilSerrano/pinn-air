@@ -2,7 +2,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 # The base implementation for the loss functions
-from train.losses import mse_loss, system_loss
+from train.losses import system_loss
 
 class RNNAutoencoder(nn.Module):
     """
@@ -86,16 +86,17 @@ class RNNAutoencoder(nn.Module):
             y_hat (torch.Tensor): The output of the network
         """
         
-        # Compute the MSE lost
-        mse_loss = mse_loss(y, y_hat)
+        # Compute the MSE lost (fitting of the actual data)
+        mse = F.mse_loss(y_hat, y)
 
-        # Compute the system_model loss
-        physics_loss = system_loss()
+        # Compute the system_model loss 
+        # (fitting of the network to the state-space system model)
+        #physics_loss = system_loss()
 
         # Compute the reconstruction loss
-        reconstruction_loss = 0.0
+        #reconstruction_loss = 0.0
 
         # TODO - finish this section
 
         # Compute the mean-square-error loss
-        return mse_loss + physics_loss
+        return mse #+ physics_loss

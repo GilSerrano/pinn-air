@@ -1,15 +1,5 @@
 import torch
 
-def mse_loss(y, y_hat):
-    """Mean square error loss
-
-    Args:
-        y (nn.Tensor): The expected output
-        y_hat (nn.Tensor): The output of the network
-    """
-    return torch.mean((y_hat - y) ** 2)
-
-
 def system_loss(x, y_hat, system_model):
     """
     A method that implements

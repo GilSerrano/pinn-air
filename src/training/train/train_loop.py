@@ -1,10 +1,9 @@
 import torch
+import torch.nn.functional as F
 from tqdm import tqdm
 from torch.optim import AdamW
 from os.path import join as pjoin
 from torch.utils.tensorboard import SummaryWriter
-
-from .losses import mse_loss
 
 class TrainLoop(object):
     """
@@ -26,7 +25,7 @@ class TrainLoop(object):
         self.optimizer = AdamW(model.parameters(), lr=args.lr, weight_decay=args.weight_decay)
 
         # Setup the SummaryWriter to use with tensorboard
-        self.writer = SummaryWriter()
+        self.writer = SummaryWriter(log_dir=pjoin(args.save_dir, "tensorboard"))
 
         # Metrics to save during training as a function of the epochs
         self.train_mean_losses = []
@@ -99,7 +98,7 @@ class TrainLoop(object):
                 self.validation_mse.append(mse)
 
                 # Save the current model parameters
-                self.save_model(epoch, loss_train, loss_val, mse)
+                self.save_model(epoch, loss_train, 0.0, 0.0) #loss_val, mse)
 
         # Flush the writer and close it
         self.writer.flush()
@@ -144,11 +143,11 @@ class TrainLoop(object):
                 y_true += [y]
 
         # Create the torch tensors from the lists (and make sure they are in the right device)
-        y_pred = torch.tensor(y_pred).to(self.model.device)
-        y_true = torch.tensor(y_true).to(self.model.device)
+        y_pred = torch.cat(y_pred, 0).to(self.model.device)
+        y_true = torch.cat(y_true, 0).to(self.model.device)
 
         # Compute the MSE and return its value, along with the loss (if requested)
-        return mse_loss(y_true, y_pred), torch.tensor(loss).mean().item()
+        return F.mse_loss(y_pred, y_true), torch.tensor(loss).mean().item()
 
     def validate(self):
         """
