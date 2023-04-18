@@ -5,6 +5,7 @@ from Facebook Research labs:
 https://github.com/facebookresearch/pytorch3d/blob/main/pytorch3d/transforms/rotation_conversions.py
 """
 import torch
+import torch.nn.functional as F
 
 def quaternion_to_matrix(quaternions_: torch.Tensor) -> torch.Tensor:
     """
@@ -19,10 +20,10 @@ def quaternion_to_matrix(quaternions_: torch.Tensor) -> torch.Tensor:
 
     # Swap the quaternion coordinates so that we have [qw, qx, qy, qz]
     quaternions = torch.empty_like(quaternions_)
-    quaternions[..., 0] = quaternions_[3]
-    quaternions[..., 1] = quaternions_[0]
-    quaternions[..., 2] = quaternions_[1]
-    quaternions[..., 3] = quaternions_[2]
+    quaternions[..., 0] = quaternions_[..., 3]
+    quaternions[..., 1] = quaternions_[..., 0]
+    quaternions[..., 2] = quaternions_[..., 1]
+    quaternions[..., 3] = quaternions_[..., 2]
 
     r, i, j, k = torch.unbind(quaternions, -1)
     # pyre-fixme[58]: `/` is not supported for operand types `float` and `Tensor`.

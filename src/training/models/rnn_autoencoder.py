@@ -9,7 +9,7 @@ class RNNAutoencoder(nn.Module):
     Class that defines the RNN-Autoencoder model architecture.
     """
 
-    def __init__(self, input_dim, output_dim, layers, latent_dim, activation, device="cpu"):
+    def __init__(self, input_dim, output_dim, layers, latent_dim, activation, system_model, device="cpu"):
         """Initializes the network class
 
         Args:
@@ -17,6 +17,7 @@ class RNNAutoencoder(nn.Module):
             output_dim (int): The number of outputs of the system.
             layers (list, optional): The dimensions of fully-connected layers for the encoder and decoder. Defaults to [128, 64, 32].
             latent_dim (int, optional): The dimension of the bottleneck for generating the latent variable. Defaults to 1.
+            system_model (fn): A function which encodes the state-space equations that partially describe the motion of the vehicle + payload
             activation (str, optional): The name of the activation function. Defaults to 'relu'.
         """
         
@@ -24,6 +25,9 @@ class RNNAutoencoder(nn.Module):
 
         # Set the device to run the network train and inference
         self.device = device
+
+        # Set the system model for the state-space equations
+        self.system_model = system_model
 
         # Define the activation function
         activations = {'relu': F.relu, 'tanh': F.tanh, 'sigmoid': F.sigmoid}
@@ -81,6 +85,17 @@ class RNNAutoencoder(nn.Module):
             y (torch.Tensor): The expected output of the network
             y_hat (torch.Tensor): The output of the network
         """
+        
+        # Compute the MSE lost
+        mse_loss = mse_loss(y, y_hat)
+
+        # Compute the system_model loss
+        physics_loss = system_loss()
+
+        # Compute the reconstruction loss
+        reconstruction_loss = 0.0
+
+        # TODO - finish this section
 
         # Compute the mean-square-error loss
-        return mse_loss(y, y_hat) + system_loss()
+        return mse_loss + physics_loss

@@ -94,21 +94,21 @@ class SimDataset(data.Dataset):
         #dataset = torch.cat([timeseries[key] for key in timeseries.keys()], dim=-1).swapaxes(0, 1)
 
         # Only get the states that we really care about (x[k]=[p,v,R], u[k]=[w_ref, T_ref])
-        dataset = torch.cat([timeseries["p"], timeseries["v"], timeseries["attitude"], timeseries["w_ref"], timeseries["T_ref"]], dim=-1).swapaxes(0, 1)
+        dataset = torch.cat([timeseries["p"], timeseries["v"], timeseries["attitude"], timeseries["w_ref"], timeseries["T_ref"]], dim=-1)
 
         # Create the feature and target timeseries using the desired lookback
         x, y = [], []
 
-        for i in range(dataset.shape[-1] - self.lookback):
+        for i in range(dataset.shape[0] - self.lookback):
             
-            feature = dataset[:, i:i+self.lookback]
-            target = dataset[0:10, i+1:i+self.lookback+1]         # we only need at the output the p[k+1], v[k+1], R[k+1] (3+3+4)
+            feature = dataset[i:i+self.lookback,:]                # We need everything for the input of the network (current state and input of the system)
+            target = dataset[i+1:i+self.lookback+1, 0:10]         # We only need at the output the p[k+1], v[k+1], R[k+1] (3+3+4)
 
             x.append(feature)
             y.append(target)
 
         # Convert back the list of tensors to a single tensor
-        return torch.cat(x, -1), torch.cat(y, -1)
+        return torch.cat(x, 0), torch.cat(y, 0)
 
     
     @staticmethod
@@ -130,8 +130,8 @@ class SimDataset(data.Dataset):
         # p_ref (dim=3), v_ref (dim=3), a_ref (dim=3),      # reference position, velocity and acceleration
         # attitude_ref (dim=3), w_ref (dim=3),              # reference attitude quaternion and angular velocity
         # T_ref (dim=1), M_ref (dim=3)                      # reference thrust and moment
-        # In this function we want to create a tensor of dimensions (batch_size, 13, max_seq_len)
 
+        # In this function we want to create a tensor of dimensions (batch_size, max_seq_len, 13)
         datasets = []
         expected_outputs = []
 
@@ -140,7 +140,7 @@ class SimDataset(data.Dataset):
             datasets += [data[0]]
             expected_outputs += [data[1]]
 
-        # Return a dataset of dimensions (batch_size, 14, max_seq_len), (batch_size, 10, max_seq_len)
+        # Return a dataset of dimensions (batch_size, max_seq_len, 13), (batch_size, max_seq_len, 10)
         return pad_sequence(datasets, batch_first=True, padding_value=0.0), pad_sequence(expected_outputs, batch_first=True, padding_value=0.0)
     
 

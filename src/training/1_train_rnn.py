@@ -43,6 +43,23 @@ def main():
     # Create the multirotor model (used in the loss function to learn the known physics of the model
     multirotor_model = DiscreteMultirotor(Ts=0.01, mass=1.5, device=args.device) # System sampling period (s), Mass of the vehicle (without payload) Kg
 
+    for i, batch in enumerate(train_dataloader):
+
+        # Get the input of the network and the expected output
+        x, y = batch
+
+    # Get the input of the drone + payload system u=[w_x, w_y, w_z, T] and the state x=[pos,vel,attitude]
+    u = x[..., 10:14]
+    x = x[..., 0:10]        #[x, y, z, vx, vy, vz, qx, qy, qz, qw || wx, wy, wz, T]
+
+    print(u.shape)
+    print(x.shape)
+
+    multirotor_model.run(x=x, u=u)
+
+    import sys
+    sys.exit()
+
     # Create the RNN autoencoder model
     model = RNNAutoencoder(
         input_dim=14,                           # Size of the input dimensions = (x[k]=[p,v,R], u[k]=[w_ref, T_ref]) (14,)

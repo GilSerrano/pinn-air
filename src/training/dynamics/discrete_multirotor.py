@@ -47,7 +47,9 @@ class DiscreteMultirotor:
     def run(self, x: torch.Tensor, u: torch.Tensor) -> torch.Tensor:
         """
         Equation that describes the discrete state-space equations of a multirotor
-        operating in 3D space.
+        operating in 3D space. We expect the inputs to be in the form
+             x=(batch, time_series_length, len(state))
+             u=(batch, time_series_length, len(input))
 
         Args:
             x (torch.Tensor): The state of the system at the previous time-step, i.e. x[k-1]
