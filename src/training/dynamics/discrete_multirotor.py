@@ -1,5 +1,5 @@
 import torch
-from .utils import quaternion_to_matrix, matrix_to_quaternion
+from .utils import quaternion_to_matrix, matrix_to_quaternion, skew_symmetric
 
 class DiscreteMultirotor:
     """
@@ -20,7 +20,7 @@ class DiscreteMultirotor:
 
         self.Ts = Ts
         self.m = mass
-        self.g = torch.Tensor([0.0, 0.0, -9.81], device=device).unsqueeze(-1)  # [3x1] vector
+        self.g = torch.Tensor([0.0, 0.0, -9.81], device=device)  # [3x1] vector
 
         # Model for the linear dynamics of the vehicle
         # Note: since we have X \in R^6, i.e. X=[x,y,z,v_x,v_y,v_z]
@@ -42,8 +42,6 @@ class DiscreteMultirotor:
         # The "B" matrix of the dynamic model for the linear dynamics        
         self.B = torch.kron(B_star, torch.eye(3,3).to(device))
 
-        # Compute the u[k] of our model from Fref[k] (the total thrust in N at time step k)
-
     def run(self, x: torch.Tensor, u: torch.Tensor) -> torch.Tensor:
         """
         Equation that describes the discrete state-space equations of a multirotor
@@ -63,52 +61,44 @@ class DiscreteMultirotor:
         # -----------------------------------------------------
         # Compute the input of the system for the linear motion
         # -----------------------------------------------------
-
-        # TODO - check if the quaternion to matrix conversion is correct!
         
         # 1) Convert the quaternion to a rotation matrix (this can be simplified) 
         # Note that we receive the quaternion in the [qx, qx, qy, qw] convention
         rot = quaternion_to_matrix(x[..., 6:10])
 
+        # Generate the thrust vector (in order to handle batches and sequences)
+        u_shape = list(u.shape[:-1]) + [3]                  # (batch_size, sequence_size, 3)
+        total_thrust = torch.zeros(size=u_shape)
+        total_thrust[..., 2] = u[..., 3]                    # Vectors of the type (batch_size, time_sequence, [0.0, 0.0, total_thrust])
+
         # 2) Compute the reference linear acceleration that the linear system is supposed to track
-        u_k = self.g + ((1.0 / self.m) * rot * torch.tensor([0.0, 0.0, u[..., 3]], device=self.device))
+        u_k = (1.0 / self.m) * torch.matmul(rot, total_thrust[..., None]).squeeze() + self.g        # (batch_size, time_sequence, 3)
+
+
+        # dimensions of self.A =(6=i,6=j) | X=(batch_size=b, time_sequence=t, 6=j) -> (b, t, i)
+        # dimensions of self.B =(6=i, 3=j) | U=(batch_size=b, time_sequence=t, 3=j)
 
         # 3) Compute the reference state x[k+1] = A x[k] + B u[k]
-        new_x = self.A * x[..., 0:6] + self.B * u_k
+        new_x = torch.einsum('ij,btj->bti', self.A, x[..., 0:6]) + torch.einsum('ij,btj->bti', self.B, u_k)
 
         # -----------------------------------------------------
         # Compute the rotational motion update 
         # -----------------------------------------------------
 
         # 1) Compute the skew-symmetric matrix
-        skew = self.skew_symmetric(u[..., 0:3])
+        skew = skew_symmetric(u[..., 0:3])
 
         # 2) Compute the new rotation matrix R[k+1]
         new_R = rot * torch.matrix_exp(self.Ts * skew)
 
         # 3) Generate the new quaternion from the rotation matrix
         # Note that we produce a quaternion in the [qx, qy, qz, qw] convention
-
-        # TODO - check if the matrix to quaternion conversion is correct!
         new_q = matrix_to_quaternion(new_R)
 
         # -----------------------------------------------------
         # Concatenate both into a new state vector
         # -----------------------------------------------------
         return torch.cat([new_x, new_q], -1)
-
-    @staticmethod
-    def skew_symmetric(x: torch.Tensor) -> torch.Tensor:
-        """Method that given a (3x1) vector computes the corresponding
-        skew-symmetric matrix.
-
-        Args:
-            x (torch.Tensor): A 3x1 vector
-        """
-        return torch.Tensor([[  0.0, -x[2],  x[1]],
-                             [ x[2],   0.0, -x[0]],
-                             [-x[1],  x[0],   0.0]], device=x.device)
-    
 
 
 if __name__ == "__main__":

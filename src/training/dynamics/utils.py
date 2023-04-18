@@ -113,9 +113,47 @@ def matrix_to_quaternion(matrix: torch.Tensor) -> torch.Tensor:
 
     # Swap the quaternion coordinates so that we have [qx, qy, qz, qw]
     quaternions = torch.empty_like(quat)
-    quaternions[..., 0] = quat[1]
-    quaternions[..., 1] = quat[2]
-    quaternions[..., 2] = quat[3]
-    quaternions[..., 3] = quat[0]
+    quaternions[..., 0] = quat[..., 1]
+    quaternions[..., 1] = quat[..., 2]
+    quaternions[..., 2] = quat[..., 3]
+    quaternions[..., 3] = quat[..., 0]
 
     return quaternions
+
+def skew_symmetric(v: torch.Tensor) -> torch.Tensor:
+    """
+    Compute the Hat operator [1] of a batch of 3D vectors.
+
+    Args:
+        v: Batch of vectors of shape `(..., 3)`.
+
+    Returns:
+        Batch of skew-symmetric matrices of shape
+        `(minibatch, 3 , 3)` where each matrix is of the form:
+            `[    0  -v_z   v_y ]
+             [  v_z     0  -v_x ]
+             [ -v_y   v_x     0 ]`
+
+    Raises:
+        ValueError if `v` is of incorrect shape.
+
+    [1] https://en.wikipedia.org/wiki/Hat_operator
+    """
+
+    *tensor_shape, dim = v.shape
+
+    if dim != 3:
+        raise ValueError("Input vectors have to be 3-dimensional.")
+
+    h = torch.zeros(list(tensor_shape) + [3, 3], dtype=v.dtype, device=v.device)
+
+    x, y, z = v.unbind(-1)
+
+    h[..., 0, 1] = -z
+    h[..., 0, 2] = y
+    h[..., 1, 0] = z
+    h[..., 1, 2] = -x
+    h[..., 2, 0] = -y
+    h[..., 2, 1] = x
+
+    return h

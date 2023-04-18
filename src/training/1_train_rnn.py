@@ -49,11 +49,9 @@ def main():
         x, y = batch
 
     # Get the input of the drone + payload system u=[w_x, w_y, w_z, T] and the state x=[pos,vel,attitude]
+    # [x, y, z, vx, vy, vz, qx, qy, qz, qw || wx, wy, wz, T]
     u = x[..., 10:14]
-    x = x[..., 0:10]        #[x, y, z, vx, vy, vz, qx, qy, qz, qw || wx, wy, wz, T]
-
-    print(u.shape)
-    print(x.shape)
+    x = x[..., 0:10]        
 
     multirotor_model.run(x=x, u=u)
 
