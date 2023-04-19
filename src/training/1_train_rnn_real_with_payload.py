@@ -30,7 +30,6 @@ def main():
     # --------------------------------------------
     # TODO - remove this hardcode from the dataset
     # --------------------------------------------
-    #args.dataset = "sim_circles"
     args.dataset = "mocap_14_04_2023"
     args.data_dir = os.path.abspath("./dataset")
 
