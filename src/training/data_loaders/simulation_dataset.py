@@ -112,7 +112,7 @@ class SimDataset(data.Dataset):
 
     
     @staticmethod
-    def collate(batch):
+    def collate(batch, device):
         '''
         Method used to collate the data from the dataset into batches
         Args:
@@ -141,7 +141,7 @@ class SimDataset(data.Dataset):
             expected_outputs += [data[1]]
 
         # Return a dataset of dimensions (batch_size, max_seq_len, 13), (batch_size, max_seq_len, 10)
-        return pad_sequence(datasets, batch_first=True, padding_value=0.0), pad_sequence(expected_outputs, batch_first=True, padding_value=0.0)
+        return pad_sequence(datasets, batch_first=True, padding_value=0.0).to(device), pad_sequence(expected_outputs, batch_first=True, padding_value=0.0).to(device)
     
 
 class SimCircles(SimDataset):

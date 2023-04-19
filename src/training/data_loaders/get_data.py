@@ -39,16 +39,17 @@ def get_dataset_loader(name, batch_size, datapath, split='train', device="cpu"):
     dataset_class = get_dataset_class(name)
 
     # Instantiate the Dataset Object
-    dataset = dataset_class(dataset_path=pjoin(datapath, name), split=split, lookback=1, device=device)
+    dataset = dataset_class(dataset_path=pjoin(datapath, name), split=split, lookback=1)
 
     # Create a dataloader from the dataset (i.e. create batches from the dataset)
     loader = DataLoader(
-        dataset,                        # The dataset itself
-        batch_size=batch_size,          # The size of each batch
-        shuffle=False,                  # Whether to shuffle the sequences on the dataset
-        num_workers=cpu_count(),        # The number of cpu to use to load the dataset and generate the batches in parallel
-        drop_last=False,                # Drop the last samples if not enough to make a batch of the desired size
-        collate_fn=dataset.collate      # Custom collate function for the dataset
+        dataset,                                          # The dataset itself
+        batch_size=batch_size,                            # The size of each batch
+        shuffle=False,                                    # Whether to shuffle the sequences on the dataset
+        num_workers=0,                                    # The number of cpu to use to load the dataset and generate the batches in parallel
+        drop_last=False,                                  # Drop the last samples if not enough to make a batch of the desired size
+        collate_fn=lambda x: dataset.collate(x, device),  # Custom collate function for the dataset
+        multiprocessing_context=None
     )
 
     return loader

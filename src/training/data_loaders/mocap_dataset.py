@@ -123,7 +123,7 @@ class RealMocap(data.Dataset):
 
         # Only get the states that we really care about (x[k]=[p,v,R], u[k]=[w_ref, T_ref], x_payload[k]=[p] )
         #         Dimension:        3       ,        3       ,          4            ,        3           ,        1           ,        3       
-        dataset = torch.cat([timeseries["p"], timeseries["v"], timeseries["attitude"], timeseries["w_ref"], timeseries["T_ref"], timeseries["p_load"]], dim=-1)
+        dataset = torch.cat([timeseries["p"], timeseries["v"], timeseries["attitude"], timeseries["w_ref"], timeseries["T_ref"], timeseries["p_load"]], dim=-1).to(self.device)
 
         # Create the feature and target timeseries using the desired lookback
         x, y = [], []
@@ -143,10 +143,10 @@ class RealMocap(data.Dataset):
             y.append(target)
 
         # Convert back the list of tensors to a single tensor
-        return torch.cat(x, 0), torch.cat(y, 0)
+        return torch.cat(x, 0).to(self.device), torch.cat(y, 0).to(self.device)
 
     @staticmethod
-    def collate(batch):
+    def collate(batch, device):
         '''
         Method used to collate the data from the dataset into batches
         Args:
@@ -168,4 +168,4 @@ class RealMocap(data.Dataset):
             expected_outputs += [data[1]]
 
         # Return a dataset of dimensions (batch_size, max_seq_len, 13), (batch_size, max_seq_len, 10)
-        return pad_sequence(datasets, batch_first=True, padding_value=0.0), pad_sequence(expected_outputs, batch_first=True, padding_value=0.0)
+        return pad_sequence(datasets, batch_first=True, padding_value=0.0).to(device), pad_sequence(expected_outputs, batch_first=True, padding_value=0.0).to(device)
