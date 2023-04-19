@@ -25,6 +25,8 @@ def main():
     # Check the device and set the default
     args.device = 'cuda:0' if args.cuda and torch.cuda.is_available() else 'cpu'
     torch.set_default_device(args.device)
+    
+    print("Using device: ", args.device)
 
     # Load the dataset
     # --------------------------------------------
