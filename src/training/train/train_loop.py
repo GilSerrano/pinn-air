@@ -137,9 +137,14 @@ class TrainLoop(object):
                 # Compute the loss over the validation set
                 if compute_loss:
                     loss.append(self.model.compute_loss(x, y, y_hat))
-                
-                # Add the prediction to the vector
-                y_pred += [torch.flatten(y_hat)]
+            
+                # Save the predictions and the expected output
+                # If the model is a classification model, we only want to save the last output
+                if self.model.pooled_classification:
+                    y_pred += [torch.flatten(y_hat[:,-1,:])]
+                else:
+                    y_pred += [torch.flatten(y_hat)]
+
                 y_true += [torch.flatten(y)]
 
         # Create the torch tensors from the lists (and make sure they are in the right device)

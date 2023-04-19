@@ -33,9 +33,12 @@ def main():
     args.dataset = "mocap_14_04_2023"
     args.data_dir = os.path.abspath("./dataset")
 
-    train_dataloader = get_dataset_loader(args.dataset, batch_size=args.batch_size, datapath=args.data_dir, split="train", device=args.device)
-    validation_dataloader = get_dataset_loader(args.dataset, batch_size=args.batch_size, datapath=args.data_dir, split="val", device=args.device)
-    test_dataloader = get_dataset_loader(name=args.dataset, batch_size=args.batch_size, datapath=args.data_dir, split="test", device=args.device)
+    lookback=5
+    pooled_classification=True      # Only predict the last sample of a sequence, given the sequence of inputs
+
+    train_dataloader = get_dataset_loader(args.dataset, batch_size=args.batch_size, datapath=args.data_dir, split="train", lookback=lookback, pooled_classification=pooled_classification, device=args.device)
+    validation_dataloader = get_dataset_loader(args.dataset, batch_size=args.batch_size, datapath=args.data_dir, split="val", lookback=lookback, pooled_classification=pooled_classification, device=args.device)
+    test_dataloader = get_dataset_loader(name=args.dataset, batch_size=args.batch_size, datapath=args.data_dir, split="test", lookback=lookback, pooled_classification=pooled_classification, device=args.device)
 
     # NOTES: Input of the network  (x[k]=[p,v,R], u[k]=[w_ref, T_ref]) (14,)
     #        Output of the network (x[k+1]=[p,v,R]) (10,)
@@ -65,7 +68,6 @@ def main():
     # Test the model
     print("Testing...")
     test_loop = training_loop.test()
-
 
 if __name__ == "__main__":
     main()

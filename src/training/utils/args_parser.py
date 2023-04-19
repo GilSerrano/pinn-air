@@ -5,7 +5,7 @@ def add_base_options(parser):
     group.add_argument("--cuda", default=True, type=bool, help="Use cuda device, otherwise use CPU.")
     group.add_argument("--device", default=0, type=int, help="Device id to use.")
     group.add_argument("--seed", default=10, type=int, help="For fixing random seed.")
-    group.add_argument("--batch_size", default=4, type=int, help="Batch size during training.")
+    group.add_argument("--batch_size", default=50, type=int, help="Batch size during training.")
 
 
 def add_model_options(parser):

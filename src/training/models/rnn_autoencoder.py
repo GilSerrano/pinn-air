@@ -7,7 +7,7 @@ class RNNAutoencoder(nn.Module):
     Class that defines the RNN-Autoencoder model architecture.
     """
 
-    def __init__(self, input_dim, output_dim, layers, latent_dim, activation, system_model, device="cpu"):
+    def __init__(self, input_dim, output_dim, layers, latent_dim, activation, system_model, pooled_classification=True, device="cpu"):
         """Initializes the network class
 
         Args:
@@ -16,6 +16,7 @@ class RNNAutoencoder(nn.Module):
             layers (list, optional): The dimensions of fully-connected layers for the encoder and decoder. Defaults to [128, 64, 32].
             latent_dim (int, optional): The dimension of the bottleneck for generating the latent variable. Defaults to 1.
             system_model (fn): A function which encodes the state-space equations that partially describe the motion of the vehicle + payload
+            pooled_classification (bool, optional): Whether to use the pooled classification or not, i.e. we only care about the last prediction of the network for the loss, given a set of inputs. Defaults to True.
             regularization (dict): A dictionary with the regularization constants for the loss function
             activation (str, optional): The name of the activation function. Defaults to 'relu'.
 
@@ -38,6 +39,9 @@ class RNNAutoencoder(nn.Module):
 
         # Set the device to run the network train and inference
         self.device = device
+
+        # Whether we use the pooled classification or not (i.e. we only care about the last prediction of the network for the loss, given a set of inputs)
+        self.pooled_classification = pooled_classification
 
         # Set the system model for the state-space equations
         self.system_model = system_model
@@ -98,6 +102,17 @@ class RNNAutoencoder(nn.Module):
             y (torch.Tensor): The expected output of the network   [x,y,z | vx,vy,vz | qx,qy,qz,qw | px,py,pz]
             y_hat (torch.Tensor): The output of the network        [x,y,z | vx,vy,vz | qx,qy,qz,qw | px,py,pz]
         """
+
+        # If we are predicting only the last state of the sequence, given multiple previous steps of the sequence to the network
+        if self.pooled_classification:
+
+            # We only care about the last prediction of the network for the loss, given a set of inputs
+            y_hat = y_hat[:, -1, :]
+            y_hat = y_hat.unsqueeze(1)
+
+            # We only need the last state given as input to the network, to compute the next state based on a physical law
+            x = x[:, -1, :]
+            x = x.unsqueeze(1)
         
         # Compute the MSE lost (fitting of the actual data)
         mse = F.mse_loss(y_hat, y)
@@ -115,7 +130,7 @@ class RNNAutoencoder(nn.Module):
 
         # Quaternion should have norm 1, so we try to enforce that
         # constraint in the loss function
-        quat_norm = x[..., 6:10].norm(dim=-1)
+        quat_norm = y_hat[..., 6:10].norm(dim=-1)
         quaternion_norm_loss = F.mse_loss(torch.ones_like(quat_norm), quat_norm)
 
         # Compute the reconstruction loss

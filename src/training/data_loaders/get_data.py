@@ -20,7 +20,7 @@ def get_dataset_class(name):
     except KeyError:
         raise ValueError(f'Unsupported dataset name [{name}]')
 
-def get_dataset_loader(name, batch_size, datapath, split='train', device="cpu"):
+def get_dataset_loader(name, batch_size, datapath, split='train', lookback=5, pooled_classification=True, device="cpu"):
     """
     Generate batches from the dataset.
 
@@ -39,7 +39,7 @@ def get_dataset_loader(name, batch_size, datapath, split='train', device="cpu"):
     dataset_class = get_dataset_class(name)
 
     # Instantiate the Dataset Object
-    dataset = dataset_class(dataset_path=pjoin(datapath, name), split=split, lookback=1)
+    dataset = dataset_class(dataset_path=pjoin(datapath, name), split=split, lookback=lookback, pooled_classification=pooled_classification, device=device)
 
     # Create a dataloader from the dataset (i.e. create batches from the dataset)
     loader = DataLoader(

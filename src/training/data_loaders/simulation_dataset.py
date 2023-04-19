@@ -82,7 +82,7 @@ class SimDataset(data.Dataset):
     def __getitem__(self, index):
         """Returns the data for the given index.
         Args:
-            index (int): The index of the data to be returned.
+            index (int): The index of the data to be returned. 
         Returns:
             tuple(nn.Tensor): A tupple containing the data for the given index.
         """
@@ -149,7 +149,7 @@ class SimCircles(SimDataset):
     A wrapper class for the sim_circles dataset
     """
     
-    def __init__(self, dataset_path='', split="train", lookback=1, device="cpu"):
+    def __init__(self, dataset_path='', split="train", lookback=5, pooled_classification=True, device="cpu"):
 
         # If no path is given, use the default path for the dataset
         if dataset_path == '':

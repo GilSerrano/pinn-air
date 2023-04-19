@@ -9,7 +9,7 @@
             "type": "python",
             "request": "launch",
             "cwd": "${workspaceFolder}/src/training",
-            "program": "1_train_rnn.py",
+            "program": "1_train_rnn_real_with_payload.py",
             "args": ["--save_dir", "output"],
             "console": "integratedTerminal",
             "justMyCode": true

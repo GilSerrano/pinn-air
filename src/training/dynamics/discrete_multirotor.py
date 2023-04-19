@@ -49,6 +49,22 @@ class DiscreteMultirotor:
              x=(batch, time_series_length, len(state))
              u=(batch, time_series_length, len(input))
 
+             sequencia de input
+             4000 5 17
+
+             output da rede
+             4000 1 13
+
+              x[0], x[1], x[2], x[3], x[4] -> x[1], x[2], x[3], x[4], x[5]
+
+              x = 4000 5 13
+              u = 4000 5 4     -> 4000 5 13
+
+              (4000 1 13) - (:, -1, :)
+
+            output 
+            4000 5 14
+
         Args:
             x (torch.Tensor): The state of the system at the previous time-step, i.e. x[k-1]
                 x[k-1] = [x,y,z | v_x, v_y,v_z | q_x, q_y, q_z, q_w]
