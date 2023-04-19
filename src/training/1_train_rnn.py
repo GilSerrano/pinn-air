@@ -24,6 +24,10 @@ def main():
 
     # Check the device and set the default
     args.device = 'cuda:0' if args.cuda and torch.cuda.is_available() else 'cpu'
+
+    # TODO - remove this line - used for debugging
+    args.device = "cpu"
+
     torch.set_default_device(args.device)
 
     # Load the dataset
@@ -46,8 +50,8 @@ def main():
 
     # Create the RNN autoencoder model
     model = RNNAutoencoder(
-        input_dim=14,                           # Size of the input dimensions = (x[k]=[p,v,R], u[k]=[w_ref, T_ref]) (14,)
-        output_dim=10,                          # Size of the output dimension = (x[k+1]=[p,v,R]) (10,)
+        input_dim=17,                           # Size of the input dimensions = (x[k]=[p,v,R], u[k]=[w_ref, T_ref], x_payload=[p]) (17,)
+        output_dim=13,                          # Size of the output dimension = (x[k+1]=[p,v,R], x_payload[k+1]=[p]) (13,)
         layers=[128, 64, 32],                   # Sizes of the encoder-decoder layers
         latent_dim=10,                          # Latent dimension going inside the RNN layers
         activation="relu",                      # The activation function to be used

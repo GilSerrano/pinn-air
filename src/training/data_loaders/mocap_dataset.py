@@ -13,9 +13,18 @@ class RealMocap(data.Dataset):
     Base class for real datasets acquired in the Taguspark MOCAP arena
     with drone + payload 
 
-    Args:
-        SimDataset (_type_): _description_
+    It is assumed that each timeseries contains: 
+    t_sampling (float)                                # sampling period of the system
+    time (dim=1),                                     # time of the system
+    p (dim=3), v (dim=3), a (dim=3),                  # position velocity and acceleration of the system
+    attitude (dim=4), w (dim=3),                      # attitude quaternion and angular velocity of the system
+    p_ref (dim=3), v_ref (dim=3), a_ref (dim=3),      # reference position, velocity and acceleration
+    w_ff (dim=3)                                      # reference angular velocity computed directly only from the trajectory based on the reference jerk (not applied directly)
+    attitude_ref (dim=4), w_ref (dim=3),              # reference attitude quaternion and angular velocity for the vehicle to track
+    T_ref (dim=1)                                     # reference thrust
+    p_load (dim=3), attitude_load(dim=3)              # position and attitude of the payload
     """
+
     def __init__(self, dataset_path='', split="train", lookback=1, device="cpu"):
         """Initializes the Simulation dataset class
 
@@ -82,13 +91,59 @@ class RealMocap(data.Dataset):
         # Sort the data by length (TODO: check if we still need this. If not, just remove it)
         self.name_list, self.length_list = zip(*sorted(zip(name_list, length_list), key=lambda x: x[1]))
 
-        print(self.length_list)
-
         # Convert the lengths list to a numpy array
         self.length_list = np.array(self.length_list)
 
         # Check if the dataset is empty
         assert len(self.dataset) >= 1, 'You loaded an empty dataset, '
+
+    def __len__(self):
+        """Returns the length of the dataset."""
+        return len(self.dataset)
+    
+    def __getitem__(self, index):
+        """Returns the data for the given index.
+        Args:
+            index (int): The index of the data to be returned.
+        Returns:
+            tuple(nn.Tensor): A tupple containing the data for the given index (input, target)
+
+        Note: The input is a tensor of shape (lookback, 17) and the target is a tensor of shape (lookback, 10)
+
+            Content of the input tensor:
+            x[k] = [p[k], v[k], R[k], w_ref[k], T_ref[k], p_load[k]]
+
+            Content of the target tensor:
+            y[k] = [p[k+1], v[k+1], R[k+1], w_ref[k+1], T_ref[k+1], p_load[k+1]]
+        
+        """
+
+        # Get the timeserires corresponding to the desired index
+        timeseries = self.dataset[self.name_list[index]]
+
+        # Only get the states that we really care about (x[k]=[p,v,R], u[k]=[w_ref, T_ref], x_payload[k]=[p] )
+        #         Dimension:        3       ,        3       ,          4            ,        3           ,        1           ,        3       
+        dataset = torch.cat([timeseries["p"], timeseries["v"], timeseries["attitude"], timeseries["w_ref"], timeseries["T_ref"], timeseries["p_load"]], dim=-1)
+
+        # Create the feature and target timeseries using the desired lookback
+        x, y = [], []
+
+        for i in range(dataset.shape[0] - self.lookback):
+            
+            feature = dataset[i:i+self.lookback,:]                      # We need everything for the input of the network (current state and input of the system)
+
+            # Generate the targets for the network to predict
+            target = dataset[i+1:i+self.lookback+1, 0:10]               # We only need at the output the p[k+1], v[k+1], R[k+1] (3+3+4)
+            target_payload_pos = dataset[i+1:i+self.lookback+1, 14:17]  # We only need at the output the p[k+1] of the payload (3)
+
+            # Concatenate the target of the payload position to the target of the vehicle
+            target = torch.cat([target, target_payload_pos], dim=-1)
+
+            x.append(feature)
+            y.append(target)
+
+        # Convert back the list of tensors to a single tensor
+        return torch.cat(x, 0), torch.cat(y, 0)
 
     @staticmethod
     def collate(batch):
@@ -102,24 +157,23 @@ class RealMocap(data.Dataset):
                 - The batch of the timeseries with the expected output
         '''
 
-        # Each timeseries contains: 
-        # time (dim=1),                                     # time of the system
-        # p (dim=3), v (dim=3), a (dim=3),                  # position velocity and acceleration of the system
-        # attitude (dim=4), w (dim=3),                      # attitude quaternion and angular velocity of the system
-        # p_ref (dim=3), v_ref (dim=3), a_ref (dim=3),      # reference position, velocity and acceleration
-        # attitude_ref (dim=4), w_ref (dim=3),              # reference attitude quaternion and angular velocity
-        # T_ref (dim=1), M_ref (dim=3)                      # reference thrust and moment
-
         # In this function we want to create a tensor of dimensions (batch_size, max_seq_len, 13)
         datasets = []
         expected_outputs = []
 
-        print(data[0])
-
         # Get the timeseries from the batch
         for data in batch:
+
             datasets += [data[0]]
             expected_outputs += [data[1]]
 
         # Return a dataset of dimensions (batch_size, max_seq_len, 13), (batch_size, max_seq_len, 10)
         return pad_sequence(datasets, batch_first=True, padding_value=0.0), pad_sequence(expected_outputs, batch_first=True, padding_value=0.0)
+
+
+if __name__ == "__main__":
+
+    dataset = RealMocap(lookback=1)
+
+    batch = [dataset[0], dataset[1]]
+    print(dataset.collate(batch)[1].shape)
