@@ -169,11 +169,3 @@ class RealMocap(data.Dataset):
 
         # Return a dataset of dimensions (batch_size, max_seq_len, 13), (batch_size, max_seq_len, 10)
         return pad_sequence(datasets, batch_first=True, padding_value=0.0), pad_sequence(expected_outputs, batch_first=True, padding_value=0.0)
-
-
-if __name__ == "__main__":
-
-    dataset = RealMocap(lookback=1)
-
-    batch = [dataset[0], dataset[1]]
-    print(dataset.collate(batch)[1].shape)

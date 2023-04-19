@@ -139,8 +139,8 @@ class TrainLoop(object):
                     loss.append(self.model.compute_loss(x, y, y_hat))
                 
                 # Add the prediction to the vector
-                y_pred += [y_hat]
-                y_true += [y]
+                y_pred += [torch.flatten(y_hat)]
+                y_true += [torch.flatten(y)]
 
         # Create the torch tensors from the lists (and make sure they are in the right device)
         y_pred = torch.cat(y_pred, 0).to(self.model.device)
