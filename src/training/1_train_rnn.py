@@ -30,8 +30,8 @@ def main():
     # --------------------------------------------
     # TODO - remove this hardcode from the dataset
     # --------------------------------------------
-    args.dataset = "sim_circles"
-    #args.dataset = "mocap_14_04_2023"
+    #args.dataset = "sim_circles"
+    args.dataset = "mocap_14_04_2023"
     args.data_dir = os.path.abspath("./dataset")
 
     train_dataloader = get_dataset_loader(args.dataset, batch_size=args.batch_size, datapath=args.data_dir, split="train", device=args.device)

@@ -5,6 +5,8 @@ from tqdm import tqdm
 from torch.utils import data
 from os.path import join as pjoin
 
+# Used for padding the timeseries
+from torch.nn.utils.rnn import pad_sequence
 
 class RealMocap(data.Dataset):
     """
@@ -40,8 +42,6 @@ class RealMocap(data.Dataset):
         # Path to the file containing the list of files to use for this dataset (train, test, or val)
         split_file = pjoin(dataset_path, f'{split}.txt')
 
-        print(split_file)
-
         # split file has the IDs of the sequences to be used for training or testing
         with cs.open(split_file, 'r') as f:
             name_list += [line.strip() for line in f.readlines()]
@@ -49,8 +49,6 @@ class RealMocap(data.Dataset):
         # A list with the sequence of lengths of the sequences in the dataset
         length_list = []
         self.dataset = {}
-
-        print(name_list)
 
         # Load the data from the files
         for name in tqdm(name_list):
@@ -60,13 +58,12 @@ class RealMocap(data.Dataset):
                 timeseries = np.load(pjoin(dataset_path, 'data', name))
                 timeseries_torch = {}
 
-                print("----")
-                print(timeseries[0])
-                print("---")
-
                 # Load all the numpy arrays from the timeseries_dict and create the tensors
                 for key, value in timeseries.items():
-                    timeseries_torch[key] = torch.from_numpy(value).float().to(self.device)
+                    
+                    # Note: we should not load the t_sampling as a tensor
+                    if key != "t_sampling" and key != "__header__" and key != "__version__" and key != "__globals__":
+                        timeseries_torch[key] = torch.from_numpy(value).float().to(self.device)
 
                     # Make sure to create an extra dimensions for the time tensor 
                     # to make it compatible with the other tensors
@@ -85,15 +82,44 @@ class RealMocap(data.Dataset):
         # Sort the data by length (TODO: check if we still need this. If not, just remove it)
         self.name_list, self.length_list = zip(*sorted(zip(name_list, length_list), key=lambda x: x[1]))
 
+        print(self.length_list)
+
         # Convert the lengths list to a numpy array
         self.length_list = np.array(self.length_list)
 
         # Check if the dataset is empty
         assert len(self.dataset) >= 1, 'You loaded an empty dataset, '
 
-if __name__ == "__main__":
+    @staticmethod
+    def collate(batch):
+        '''
+        Method used to collate the data from the dataset into batches
+        Args:
+            batch (list): A list of dicts containing the timeseries to compose the batch
+        Returns:
+            tuple(nn.Tensor, nn.Tensor): A tuple containing:
+                - The batch of timeseries with input of the network 
+                - The batch of the timeseries with the expected output
+        '''
 
-    dataset = RealMocap(lookback=1)
+        # Each timeseries contains: 
+        # time (dim=1),                                     # time of the system
+        # p (dim=3), v (dim=3), a (dim=3),                  # position velocity and acceleration of the system
+        # attitude (dim=4), w (dim=3),                      # attitude quaternion and angular velocity of the system
+        # p_ref (dim=3), v_ref (dim=3), a_ref (dim=3),      # reference position, velocity and acceleration
+        # attitude_ref (dim=4), w_ref (dim=3),              # reference attitude quaternion and angular velocity
+        # T_ref (dim=1), M_ref (dim=3)                      # reference thrust and moment
 
-    batch = [dataset[0], dataset[1]]
-    print(dataset.collate(batch)[1].shape)
+        # In this function we want to create a tensor of dimensions (batch_size, max_seq_len, 13)
+        datasets = []
+        expected_outputs = []
+
+        print(data[0])
+
+        # Get the timeseries from the batch
+        for data in batch:
+            datasets += [data[0]]
+            expected_outputs += [data[1]]
+
+        # Return a dataset of dimensions (batch_size, max_seq_len, 13), (batch_size, max_seq_len, 10)
+        return pad_sequence(datasets, batch_first=True, padding_value=0.0), pad_sequence(expected_outputs, batch_first=True, padding_value=0.0)

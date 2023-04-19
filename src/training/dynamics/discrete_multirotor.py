@@ -20,7 +20,7 @@ class DiscreteMultirotor:
 
         self.Ts = Ts
         self.m = mass
-        self.g = torch.Tensor([0.0, 0.0, -9.81], device=device)  # [3x1] vector
+        self.g = torch.tensor([0.0, 0.0, -9.81], device=device)  # [3x1] vector
 
         # Model for the linear dynamics of the vehicle
         # Note: since we have X \in R^6, i.e. X=[x,y,z,v_x,v_y,v_z]

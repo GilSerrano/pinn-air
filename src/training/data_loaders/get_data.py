@@ -5,7 +5,7 @@ from os.path import join as pjoin
 from torch.utils.data import DataLoader
 
 # Import the data models
-from .dataset import SimCircles
+from .simulation_dataset import SimCircles
 from .mocap_dataset import RealMocap
 
 # A dicitionary of the datasets available

@@ -2,4 +2,5 @@
 from .get_data import get_dataset_loader
 
 # Import the datasets
-from .dataset import SimCircles
+from .mocap_dataset import RealMocap
+from .simulation_dataset import SimCircles
