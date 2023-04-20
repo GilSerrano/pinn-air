@@ -2,12 +2,31 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
+from dynamics.utils import quaternion_multiply, quaternion_invert
+
 class RNNAutoencoder(nn.Module):
     """
     Class that defines the RNN-Autoencoder model architecture.
     """
 
-    def __init__(self, input_dim, output_dim, layers, latent_dim, activation, system_model, pooled_classification=True, device="cpu"):
+    def __init__(self, input_dim, output_dim, layers, 
+            latent_dim, 
+            activation, 
+            system_model, 
+            pooled_classification=True, 
+            regularization={
+                "mse_drone_position": 0.5,
+                "mse_drone_velocity": 0.3,
+                "quaternion_norm": 0.3,
+                "attitude_error": 0.3,
+                "mse_payload_position": 0.2,
+                "physical_model": {
+                    "mse_position": 0.4,
+                    "mse_velocity": 0.3,
+                    "mse_attitude": 0.3
+                }
+            },
+            device="cpu"):
         """Initializes the network class
 
         Args:
@@ -42,6 +61,9 @@ class RNNAutoencoder(nn.Module):
 
         # Whether we use the pooled classification or not (i.e. we only care about the last prediction of the network for the loss, given a set of inputs)
         self.pooled_classification = pooled_classification
+
+        # The regularization constants to use in the loss function
+        self.regularization = regularization
 
         # Set the system model for the state-space equations
         self.system_model = system_model
@@ -113,30 +135,77 @@ class RNNAutoencoder(nn.Module):
             # We only need the last state given as input to the network, to compute the next state based on a physical law
             x = x[:, -1, :]
             x = x.unsqueeze(1)
+
+        # --------------------------------------------
+        # Compute the fitting loss
+        # --------------------------------------------
         
         # Compute the MSE lost (fitting of the actual data)
-        mse = F.mse_loss(y_hat, y)
+        mse_drone_position = F.mse_loss(y_hat[..., 0:3], y[..., 0:3])
+        mse_drone_velocity = F.mse_loss(y_hat[..., 3:6], y[..., 3:6])
+        mse_payload_position = F.mse_loss(y_hat[..., 10:13], y[..., 10:13])
+
+        # Compute the rotation error from the quaternion => errror = (q x q_hat')
+        quaternion_error = quaternion_multiply(y[..., 6:10], quaternion_invert(y_hat[..., 6:10]))
+        mse_quat_error = torch.mean(quaternion_error ** 2)
+
+        # --------------------------------------------
+        # Compute the physics loss
+        # --------------------------------------------
 
         # Perform the prediction based on our physical model of the quadrotor
-        # to predict [x,y,z | vx,vy,vz | qx,qy,qz,qw]
+        # to predict [x,y,z | vx,vy,vz | qx,qy,qz,qw] and compare with the prediction from the network
         physics_pred = self.system_model(x=x[..., 0:10], u=x[...,10:14])
+        mse_physics_position = F.mse_loss(physics_pred[..., 0:3], y_hat[..., 0:3])
+        mse_physics_velocity = F.mse_loss(physics_pred[..., 3:6], y_hat[..., 3:6])
+        physics_quaternion_error = torch.mean(quaternion_multiply(quaternion_invert(physics_pred[..., 6:10]), y_hat[..., 6:10]) ** 2)
 
-        # Compute the MSE of the physics loss between 
-        # the drone physical model and the prediction of the network
-        physics_loss = F.mse_loss(physics_pred, y_hat[..., 0:10])
+        # --------------------------------------------
+        # Enforce the unit quaternion norm
+        # --------------------------------------------
 
-        # Note: the line bellow can be used to check the correctness of the physics model against real data
-        # aux = F.mse_loss(physics_pred, y)
-
-        # Quaternion should have norm 1, so we try to enforce that
-        # constraint in the loss function
+        # Quaternion should have norm 1, so we try to enforce that constraint in the loss function
         quat_norm = y_hat[..., 6:10].norm(dim=-1)
         quaternion_norm_loss = F.mse_loss(torch.ones_like(quat_norm), quat_norm)
 
-        # Compute the reconstruction loss
-        # reconstruction_loss = 0.0
+        # --------------------------------------------
+        # Extra - Compute the difference between the physics model and reality
+        # --------------------------------------------
 
-        # TODO - finish this section
+        # Note: the line bellow can be used to check the correctness of the physics model against real data
+        # These terms are not used in the loss function, but can be used to monitor the performance of the physics model        
+        real_model_position_loss = F.mse_loss(physics_pred[..., 0:3], y[..., 0:3])
+        real_model_velocity_loss = F.mse_loss(physics_pred[..., 3:6], y[..., 3:6])
+        real_model_quaternion_error = torch.mean(quaternion_multiply(quaternion_invert(physics_pred[..., 6:10]), y[..., 6:10]) ** 2)
 
-        # Compute the mean-square-error loss
-        return mse + physics_loss + quaternion_norm_loss
+        # --------------------------------------------
+        # Compute the total loss
+        # --------------------------------------------
+
+        # Compute the total loss (fitting error + unit quaternion norm + physics error)
+        total_loss = (self.regularization["mse_drone_position"] * mse_drone_position) + \
+            (self.regularization["mse_drone_velocity"] * mse_drone_velocity) + \
+            (self.regularization["quaternion_norm"] * quaternion_norm_loss) + \
+            (self.regularization["attitude_error"] * mse_quat_error) + \
+            (self.regularization["mse_payload_position"] * mse_payload_position) +  \
+            (self.regularization["physical_model"]["mse_position"] * mse_physics_position) + \
+            (self.regularization["physical_model"]["mse_velocity"] * mse_physics_velocity) + \
+            (self.regularization["physical_model"]["mse_attitude"] * physics_quaternion_error)
+        
+        # Save the individual loss terms
+        individual_terms = {
+            "mse_drone_position": mse_drone_position,
+            "mse_drone_velocity": mse_drone_velocity,
+            "quaternion_norm": quaternion_norm_loss,
+            "attitude_error": mse_quat_error,
+            "mse_payload_position": mse_payload_position,
+            "physical_loss": {
+                "mse_position": mse_physics_position,
+                "mse_velocity": mse_physics_velocity,
+                "mse_attitude": physics_quaternion_error
+            },
+            ""
+            "physics_model_loss": physics_model_loss
+        }
+
+        return total_loss, individual_terms
