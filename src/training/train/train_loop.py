@@ -29,6 +29,7 @@ class TrainLoop(object):
 
         # Metrics to save during training as a function of the epochs
         self.train_mean_losses = []
+        self.train_mean_individual_losses = []
         self.validation_mean_losses = []
         self.validation_mse = []
 
@@ -57,6 +58,7 @@ class TrainLoop(object):
 
                 # Train loss
                 train_loss = []
+                train_individual_losses = []
 
                 # Set the model to be in training mode
                 self.model.train()
@@ -77,6 +79,7 @@ class TrainLoop(object):
 
                     # Save the loss of the training on this batch
                     train_loss.append(loss)
+                    train_individual_losses.append(loss_terms)
 
                     # Backward pass
                     loss.backward()
@@ -86,6 +89,16 @@ class TrainLoop(object):
 
                 # Compute the training loss on the epoch
                 loss_train = torch.tensor(train_loss).mean().item()
+
+                # Compute the individual loss terms on the epoch
+                loss_terms = {}
+                for key in train_individual_losses[0].keys():
+                    if type(train_individual_losses[0][key]) == dict:
+                        loss_terms[key] = {}
+                        for subkey in train_individual_losses[0][key].keys():
+                            loss_terms[key][subkey] = torch.tensor([train_individual_losses[i][key][subkey] for i in range(len(train_individual_losses))]).mean().item()
+                    else:
+                        loss_terms[key] = torch.tensor([train_individual_losses[i][key] for i in range(len(train_individual_losses))]).mean().item()
 
                 # Compute the MSE and validation loss on the validation set
                 mse, loss_val = self.validate()
@@ -99,12 +112,13 @@ class TrainLoop(object):
                 for key, value in loss_terms.items():
                     if type(value) == dict:
                         for subkey, subvalue in value.items():
-                            self.writer.add_scalar("Loss_terms/{}/{}".format(key, subkey), subvalue.item(), epoch)
+                            self.writer.add_scalar("Loss_terms/{}/{}".format(key, subkey), subvalue, epoch)
                     else:
-                        self.writer.add_scalar("Loss_terms/{}".format(key), value.item(), epoch)
+                        self.writer.add_scalar("Loss_terms/{}".format(key), value, epoch)
 
                 # Save the loss and mse on the validation set for plotting later on
                 self.train_mean_losses.append(loss_train)
+                self.train_mean_individual_losses.append(loss_terms)
                 self.validation_mean_losses.append(loss_val)
                 self.validation_mse.append(mse)
 
@@ -118,6 +132,9 @@ class TrainLoop(object):
         # Flush the writer and close it
         self.writer.flush()
         self.writer.close()
+        
+        # Save the training results
+        self.save_training_statistics()
 
         # Set the model to be in evaluation mode again
         self.model.eval()
@@ -156,10 +173,7 @@ class TrainLoop(object):
             
                 # Save the predictions and the expected output
                 # If the model is a classification model, we only want to save the last output
-                if self.model.pooled_classification:
-                    y_pred += [torch.flatten(y_hat[:,-1,:])]
-                else:
-                    y_pred += [torch.flatten(y_hat)]
+                y_pred += [torch.flatten(y_hat)]
 
                 y_true += [torch.flatten(y)]
 
@@ -221,3 +235,16 @@ class TrainLoop(object):
             "model": self.model.state_dict(),
             "optimizer": self.optimizer.state_dict()
         }, checkpoint_path)
+
+    def save_training_statistics(self):
+        """
+        Save the MSE and other training statistics for plotting later on
+        """
+        
+        # Save the training statistics
+        torch.save({
+            "train_mean_losses": self.train_mean_losses,
+            "train_mean_individual_losses": self.train_mean_individual_losses,
+            "validation_mean_losses": self.validation_mean_losses,
+            "validation_mse": self.validation_mse
+        }, pjoin(self.save_dir, "training_statistics.pth.tar"))

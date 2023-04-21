@@ -16,15 +16,15 @@ class RNNAutoencoder(nn.Module):
             system_model, 
             pooled_classification=True, 
             regularization={
-                "mse_drone_position": 0.5,
+                "mse_drone_position": 0.6,
                 "mse_drone_velocity": 0.3,
                 "quaternion_norm": 0.3,
-                "attitude_error": 0.3,
-                "mse_payload_position": 0.5,
+                "attitude_error": 0.6,
+                "mse_payload_position": 0.6,
                 "physical_model": {
                     "mse_position": 0.4,
-                    "mse_velocity": 0.3,
-                    "mse_attitude": 0.3
+                    "mse_velocity": 0.2,
+                    "mse_attitude": 0.2
                 }
             },
             device="cpu"):
@@ -118,7 +118,36 @@ class RNNAutoencoder(nn.Module):
         for layer in self.decoder:
             x = F.dropout(self.activation(layer(x)), p=self.dropout, training=self.training)
 
+        # If we are doing pooled classification, we only care about the last prediction of the network
+        if self.pooled_classification:
+            x = x[:, -1, :].unsqueeze(1)
+
         return x
+    
+    def predict_series(self, x: torch.Tensor):
+
+        # Predict the sequence given the input
+        predicted_squence = self.forward(x)
+
+    def predict_series_recursively(self, x: torch.Tensor):
+        """Predict a sequence recursively using this network. We feed the output of the network to the input of the network at the next timestep.
+
+        Returns:
+            torch.Tensor: The predicted sequence
+        """
+
+        # Get the dimension of the time sequence of each input
+        time_sequence_length = x.shape[1]
+
+        # Initialize the predicted sequence
+        predicted_squence = torch.zeros(x.shape[0], time_sequence_length, x.shape[2]).to(self.device)
+
+        # Predict the sequence given the input
+        for i in range(time_sequence_length):
+            predicted_squence[:, i, :] = self.forward(x[:, :i+1, :])
+
+        return predicted_squence
+    
     
     def compute_loss(self, x: torch.Tensor, y: torch.Tensor, y_hat: torch.Tensor) -> torch.Tensor:
         """
@@ -132,10 +161,6 @@ class RNNAutoencoder(nn.Module):
 
         # If we are predicting only the last state of the sequence, given multiple previous steps of the sequence to the network
         if self.pooled_classification:
-
-            # We only care about the last prediction of the network for the loss, given a set of inputs
-            y_hat = y_hat[:, -1, :]
-            y_hat = y_hat.unsqueeze(1)
 
             # We only need the last state given as input to the network, to compute the next state based on a physical law
             x = x[:, -1, :]

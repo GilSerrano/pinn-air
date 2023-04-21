@@ -69,14 +69,19 @@ def main():
     training_loop.train()
 
     # Check what was the best model
-    print("Best model obtained at epoch: ", training_loop.best_model)
+    print("Best model obtained at epoch: ", training_loop.best_model_idx)
     
     # Load the best model
     training_loop.load_best_model()
 
     # Test the model
     print("Testing...")
-    test_loop = training_loop.test()
+    test_mse = training_loop.test()
+    print("Test loss: ", test_mse)
+
+    # Test the model predicitions on a timeseries
+    print("Testing on a timeseries...")
+    
 
 if __name__ == "__main__":
     main()
