@@ -72,11 +72,11 @@ class EncoderDecoder(nn.Module):
         self.decoder = Decoder(target_size, hidden_size)
 
 
-    def forward(self, x):
-        """_summary_
-
+    def forward(self, x, target_len):
+        """
         Args:
             x (torch.Tensor): The input to the network of shape (batch, timeseries_len, features)
+            target_len (int): The number of timesteps to predict
         """
 
         # Encode the input tensor
@@ -85,13 +85,16 @@ class EncoderDecoder(nn.Module):
         # Initialize tensor for predictions
         outputs = torch.zeros(x.shape[0], x.shape[1], self.target_size)
 
-        # TODO: continue from here
+        # Decode the input tensor
+        decoder_input = x[:, -1, :]
+        decoder_hidden = encoder_hidden
 
-        # decode input_tensor
-        decoder_input = input_tensor[-1, :, :]
+        # Feed to the decoder the last input timestep and the hidden state of the encoder
+        decoder_input = x[:, -1, :]
         decoder_hidden = encoder_hidden
         
         for t in range(target_len):
+            # TODO: continue here
             decoder_output, decoder_hidden = self.decoder(decoder_input, decoder_hidden)
             outputs[t] = decoder_output.squeeze(0)
             decoder_input = decoder_output
