@@ -70,7 +70,7 @@ class TrainLoop(object):
                     y_hat = self.model(x)
 
                     # Forward pass
-                    loss = self.model.compute_loss(x, y, y_hat)
+                    loss, loss_terms = self.model.compute_loss(x, y, y_hat)
 
                     # Save the loss of the training on this batch
                     train_loss.append(loss)
@@ -91,6 +91,14 @@ class TrainLoop(object):
                 self.writer.add_scalar("Loss/train", loss_train, epoch)
                 self.writer.add_scalar("Loss/validation", loss_val, epoch)
                 self.writer.add_scalar("MSE/validation", mse, epoch)
+
+                # Add the individual loss terms to the tensorboard
+                for key, value in loss_terms.items():
+                    if type(value) == dict:
+                        for subkey, subvalue in value.items():
+                            self.writer.add_scalar("Loss_terms/{}/{}".format(key, subkey), subvalue.item(), epoch)
+                    else:
+                        self.writer.add_scalar("Loss_terms/{}".format(key), value.item(), epoch)
 
                 # Save the loss and mse on the validation set for plotting later on
                 self.train_mean_losses.append(loss_train)
@@ -136,7 +144,8 @@ class TrainLoop(object):
 
                 # Compute the loss over the validation set
                 if compute_loss:
-                    loss.append(self.model.compute_loss(x, y, y_hat))
+                    total_loss, _ = self.model.compute_loss(x, y, y_hat)
+                    loss.append(total_loss)
             
                 # Save the predictions and the expected output
                 # If the model is a classification model, we only want to save the last output

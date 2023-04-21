@@ -204,8 +204,12 @@ class RNNAutoencoder(nn.Module):
                 "mse_velocity": mse_physics_velocity,
                 "mse_attitude": physics_quaternion_error
             },
-            ""
-            "physics_model_loss": physics_model_loss
+            # Note: the line bellow can be used to check the correctness of the physics model against real data
+            "real_model_loss": {
+                "real_model_mse_position": real_model_position_loss,
+                "real_model_mse_velocity": real_model_velocity_loss,
+                "real_model_mse_attitude": real_model_quaternion_error
+            }
         }
 
         return total_loss, individual_terms
