@@ -11,6 +11,7 @@ class RNNAutoencoder(nn.Module):
 
     def __init__(self, input_dim, output_dim, layers, 
             latent_dim, 
+            dropout,
             activation, 
             system_model, 
             pooled_classification=True, 
@@ -19,7 +20,7 @@ class RNNAutoencoder(nn.Module):
                 "mse_drone_velocity": 0.3,
                 "quaternion_norm": 0.3,
                 "attitude_error": 0.3,
-                "mse_payload_position": 0.2,
+                "mse_payload_position": 0.5,
                 "physical_model": {
                     "mse_position": 0.4,
                     "mse_velocity": 0.3,
@@ -34,6 +35,7 @@ class RNNAutoencoder(nn.Module):
             output_dim (int): The number of outputs of the system.
             layers (list, optional): The dimensions of fully-connected layers for the encoder and decoder. Defaults to [128, 64, 32].
             latent_dim (int, optional): The dimension of the bottleneck for generating the latent variable. Defaults to 1.
+            dropout (flaot, optional): The dropout rate to be used in the fully-connected layers.
             system_model (fn): A function which encodes the state-space equations that partially describe the motion of the vehicle + payload
             pooled_classification (bool, optional): Whether to use the pooled classification or not, i.e. we only care about the last prediction of the network for the loss, given a set of inputs. Defaults to True.
             regularization (dict): A dictionary with the regularization constants for the loss function
@@ -67,6 +69,9 @@ class RNNAutoencoder(nn.Module):
 
         # Set the system model for the state-space equations
         self.system_model = system_model
+
+        # Set the dropout probability
+        self.dropout = dropout
 
         # Define the activation function
         activations = {'relu': F.relu, 'tanh': F.tanh, 'sigmoid': F.sigmoid}
@@ -104,14 +109,14 @@ class RNNAutoencoder(nn.Module):
         # Encode the input to bottleneck layer
         x = batch
         for layer in self.encoder:
-            x = self.activation(layer(x))
+            x = F.dropout(self.activation(layer(x)), p=self.dropout, training=self.training)
 
         # Pass the bottleneck layer through the RNN
         x, _ = self.rnn(x)
 
         # Decode the input
         for layer in self.decoder:
-            x = self.activation(layer(x))
+            x = F.dropout(self.activation(layer(x)), p=self.dropout, training=self.training)
 
         return x
     

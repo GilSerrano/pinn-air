@@ -32,6 +32,9 @@ class TrainLoop(object):
         self.validation_mean_losses = []
         self.validation_mse = []
 
+        # Save the index of the best model (the one that has the lowest loss in the validation set)
+        self.best_model_idx = 0
+
         # Get the save directory to store the model over the epochs
         self.save_dir = args.save_dir
 
@@ -108,6 +111,10 @@ class TrainLoop(object):
                 # Save the current model parameters
                 self.save_model(epoch, loss_train, 0.0, 0.0) #loss_val, mse)
 
+                # Save the best model parameters
+                if epoch == 1 or (epoch > 1 and mse < self.validation_mse[self.best_model_idx-2]):
+                    self.best_model_idx = epoch
+
         # Flush the writer and close it
         self.writer.flush()
         self.writer.close()
@@ -174,6 +181,22 @@ class TrainLoop(object):
         Compute the MSE over the test set
         """
         return self.evaluate(self.test_dataloader, compute_loss=False)
+    
+    def load_best_model(self):
+        """
+        Load the best model parameters from the training
+
+        Args:
+            model (torch.nn.Module): The model to load the parameters into
+        """
+        checkpoint_path = pjoin(self.save_dir, 'checkpoint_{:04d}.pth.tar'.format(self.best_model_idx))
+        print('Loading checkpoint {}'.format(checkpoint_path))
+
+        # Load the checkpoint
+        checkpoint = torch.load(checkpoint_path)
+
+        self.model.load_state_dict(checkpoint['model'])
+        self.optimizer.load_state_dict(checkpoint['optimizer'])
 
     def save_model(self, epoch, train_loss, val_loss, val_mse):
         """

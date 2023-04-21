@@ -52,8 +52,9 @@ def main():
     model = RNNAutoencoder(
         input_dim=17,                           # Size of the input dimensions = (x[k]=[p,v,R], u[k]=[w_ref, T_ref], x_payload=[p]) (17,)
         output_dim=13,                          # Size of the output dimension = (x[k+1]=[p,v,R], x_payload[k+1]=[p]) (13,)
-        layers=[128, 64, 32],                   # Sizes of the encoder-decoder layers
+        layers=[128, 64, 32, 16],               # Sizes of the encoder-decoder layers
         latent_dim=10,                          # Latent dimension going inside the RNN layers
+        dropout=0.2,                            # Dropout to be used
         activation="relu",                      # The activation function to be used
         system_model=multirotor_model.run,      # Method used to model the multirotor dynamics
         device=args.device                      # The device to which we should send the model
@@ -66,6 +67,12 @@ def main():
     print("Training...")
     training_loop = TrainLoop(args, model, train_dataloader, validation_dataloader, test_dataloader)
     training_loop.train()
+
+    # Check what was the best model
+    print("Best model obtained at epoch: ", training_loop.best_model)
+    
+    # Load the best model
+    training_loop.load_best_model()
 
     # Test the model
     print("Testing...")
