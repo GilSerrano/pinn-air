@@ -61,6 +61,9 @@ class RNNAutoencoder(nn.Module):
         # Set the device to run the network train and inference
         self.device = device
 
+        self.input_dim = input_dim
+        self.output_dim = output_dim
+
         # Whether we use the pooled classification or not (i.e. we only care about the last prediction of the network for the loss, given a set of inputs)
         self.pooled_classification = pooled_classification
 
@@ -129,8 +132,9 @@ class RNNAutoencoder(nn.Module):
         # Predict the sequence given the input
         predicted_squence = self.forward(x)
 
-    def predict_series_recursively(self, x: torch.Tensor):
+    def predict_series_recursively(self, x: torch.Tensor, max_length=5):
         """Predict a sequence recursively using this network. We feed the output of the network to the input of the network at the next timestep.
+        Input of the type: (batch, total_time, features)
 
         Returns:
             torch.Tensor: The predicted sequence
@@ -138,13 +142,31 @@ class RNNAutoencoder(nn.Module):
 
         # Get the dimension of the time sequence of each input
         time_sequence_length = x.shape[1]
+        print(time_sequence_length)
 
-        # Initialize the predicted sequence
-        predicted_squence = torch.zeros(x.shape[0], time_sequence_length, x.shape[2]).to(self.device)
+        self.eval()
 
-        # Predict the sequence given the input
-        for i in range(time_sequence_length):
-            predicted_squence[:, i, :] = self.forward(x[:, :i+1, :])
+        with torch.no_grad():
+
+            # Initialize the predicted sequence
+            predicted_squence = torch.zeros(x.shape[0], time_sequence_length, self.output_dim).to(self.device)
+
+            # If we are dealing with pooled classification, we need to iterate over the sequence and predict one by one
+            if self.pooled_classification:
+                
+                # Predict the first N timesteps from the real input data
+                for i in range(max_length):
+                    predicted_squence[:, i, :] = self.forward(x[:, i:i+max_length, :])
+
+                # Predict the rest of the sequence using the output of the network as the input of the network
+                for i in range(max_length, time_sequence_length-max_length):
+                    # Note, we use the latest state prediction fromt the network with the true input data
+                    predicted_squence[:, i, :] = self.forward(torch.cat((predicted_squence[:, i-max_length:i, :], x[:, i:i+max_length, 10:14]), dim=2))
+
+            else:
+                # Predict the sequence given the input
+                for i in range(time_sequence_length):
+                    predicted_squence[:, i, :] = self.forward(x[:, i:i+max_length, :])
 
         return predicted_squence
     

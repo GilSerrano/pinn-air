@@ -31,7 +31,7 @@ def add_training_options(parser):
     #group.add_argument("--eval_during_training", action='store_true', help="If True, will run evaluation during training.")
     #group.add_argument("--log_interval", default=1_000, type=int, help="Log losses each N steps")
     #group.add_argument("--save_interval", default=50_000, type=int, help="Save checkpoints and run evaluation each N steps")
-    group.add_argument("--num_steps", default=100, type=int, help="Training will stop after the specified number of steps.")
+    group.add_argument("--num_steps", default=2, type=int, help="Training will stop after the specified number of steps.")
     #group.add_argument("--resume_checkpoint", default="", type=str, help="If not empty, will start from the specified checkpoint (path to model###.pt file).")
 
 

@@ -199,10 +199,17 @@ class TrainLoop(object):
     def load_best_model(self):
         """
         Load the best model parameters from the training
-
-        Args:
-            model (torch.nn.Module): The model to load the parameters into
         """
+
+        # Load the training statistics
+        statiscs_path = pjoin(self.save_dir, "training_statistics.pth.tar")
+        training_statistics = torch.load(statiscs_path)
+        self.train_mean_losses = training_statistics["train_mean_losses"]
+        self.train_mean_individual_losses = training_statistics["train_mean_individual_losses"]
+        self.validation_mean_losses = training_statistics["validation_mean_losses"]
+        self.validation_mse = training_statistics["validation_mse"]
+        self.best_model_idx = training_statistics["best_model_idx"]
+
         checkpoint_path = pjoin(self.save_dir, 'checkpoint_{:04d}.pth.tar'.format(self.best_model_idx))
         print('Loading checkpoint {}'.format(checkpoint_path))
 
@@ -246,5 +253,6 @@ class TrainLoop(object):
             "train_mean_losses": self.train_mean_losses,
             "train_mean_individual_losses": self.train_mean_individual_losses,
             "validation_mean_losses": self.validation_mean_losses,
-            "validation_mse": self.validation_mse
+            "validation_mse": self.validation_mse,
+            "best_model_idx": self.best_model_idx
         }, pjoin(self.save_dir, "training_statistics.pth.tar"))

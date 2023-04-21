@@ -6,7 +6,10 @@ from models.rnn_autoencoder import RNNAutoencoder
 from dynamics.discrete_multirotor import DiscreteMultirotor
 
 from data_loaders import get_dataset_loader
+from data_loaders.mocap_full_sequences_dataset import RealMocapFullSequences
 from utils import fix_seed, train_args, check_save_directory
+
+import matplotlib.pyplot as plt
 
 def main():
     """
@@ -81,6 +84,32 @@ def main():
 
     # Test the model predicitions on a timeseries
     print("Testing on a timeseries...")
+
+    # ------------------------------------------------------
+    # Load one complete timeseries from the training dataset
+    # ------------------------------------------------------
+    complete_sequences = RealMocapFullSequences(device="cpu")
+    sequence, time = complete_sequences[0]
+
+    predicted_sequence = model.predict_series_recursively(sequence.to(device=args.device), max_length=lookback).to(device="cpu")
+    
+    plt.figure()
+    plt.plot(time[:,:,0], sequence[0,:,0], label="x")
+    plt.plot(time[:,:,0], sequence[0,:,1], label="y")
+    plt.plot(time[:,:,0], sequence[0,:,2], label="z")
+
+    plt.legend()
+    plt.show()
+
+    plt.figure()
+    plt.plot(time[:,:,0], predicted_sequence[0,:,0], label="x")
+    plt.plot(time[:,:,0], predicted_sequence[0,:,1], label="y")
+    plt.plot(time[:,:,0], predicted_sequence[0,:,2], label="z")
+
+    plt.legend()
+    plt.plot()
+    plt.show()
+
     
 
 if __name__ == "__main__":
