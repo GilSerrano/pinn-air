@@ -153,7 +153,7 @@ class EncoderDecoder(nn.Module):
 
             # Get the current batch size and the target length to generate
             batch_size = x.shape[0]
-            target_len = u.shape[2]
+            target_len = x.shape[1]
 
             # Encode the input tensor
             encoder_hidden = self.encoder(x)
@@ -181,7 +181,7 @@ class EncoderDecoder(nn.Module):
     def compute_loss(self, y, y_hat):
 
         # Compute the loss
-        loss = F.mse_loss(y, y_hat)
+        loss = F.mse_loss(y[..., 0:3], y_hat[..., 0:3])
 
         return loss, {}
 
