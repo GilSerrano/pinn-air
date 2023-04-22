@@ -189,4 +189,5 @@ if __name__ == "__main__":
     u = torch.randn(32, 5, 4)           # (batch, timeseries_target_len, [wx,wy,wz,T])
 
     model(x, u, y, training_type='mixed', teacher_ratio=0.3)
-    model.predict_sequence_recursively(x, u)
+    output = model.predict_sequence_recursively(x, u)
+    print(output.shape)

@@ -95,7 +95,7 @@ class MocapSwipeLoader(data.Dataset):
         # Check if the dataset is empty
         assert len(self.dataset) >= 1, 'You loaded an empty dataset, '
 
-        # Define the sequences with the right features
+        # Define the complete sequences with the right features
         # (input of network)  -> x (batch_size, time, 17)
         self.x = []
         self.time = []
@@ -110,8 +110,14 @@ class MocapSwipeLoader(data.Dataset):
 
             self.time.append(timeseries["time"].to(self.device))
 
-        # Set the total number of sequences in the dataset
-        self.num_sequences = len(self.x)
+        # Now we must break the sequences into:
+        # x (time_len, 17) input of the network up until timestep T
+        # y (prediction_len, 13) expected prediction from T+1 until T+prediction_len
+        # u (prediction_len, 4) the inputs of the system from T+1 until T+prediction_len
+        
+
+
+
 
     def __len__(self):
         """Returns the length of the dataset."""
