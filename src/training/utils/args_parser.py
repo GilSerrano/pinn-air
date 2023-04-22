@@ -5,7 +5,7 @@ def add_base_options(parser):
     group.add_argument("--cuda", default=True, type=bool, help="Use cuda device, otherwise use CPU.")
     group.add_argument("--device", default=0, type=int, help="Device id to use.")
     group.add_argument("--seed", default=10, type=int, help="For fixing random seed.")
-    group.add_argument("--batch_size", default=64, type=int, help="Batch size during training.")
+    group.add_argument("--batch_size", default=128, type=int, help="Batch size during training.")
 
 
 def add_model_options(parser):
@@ -31,7 +31,7 @@ def add_training_options(parser):
     #group.add_argument("--eval_during_training", action='store_true', help="If True, will run evaluation during training.")
     #group.add_argument("--log_interval", default=1_000, type=int, help="Log losses each N steps")
     #group.add_argument("--save_interval", default=50_000, type=int, help="Save checkpoints and run evaluation each N steps")
-    group.add_argument("--num_steps", default=2, type=int, help="Training will stop after the specified number of steps.")
+    group.add_argument("--num_steps", default=50, type=int, help="Training will stop after the specified number of steps.")
     #group.add_argument("--resume_checkpoint", default="", type=str, help="If not empty, will start from the specified checkpoint (path to model###.pt file).")
 
 

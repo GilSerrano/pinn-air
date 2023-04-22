@@ -104,11 +104,17 @@ class MocapSwipeLoader(data.Dataset):
             #             Dimension:        3       ,        3       ,          4            ,        3            ,        3           ,        1                 
             series = torch.cat([timeseries["p"], timeseries["v"], timeseries["attitude"], timeseries["p_load"], timeseries["w_ref"], timeseries["T_ref"]], dim=-1).to(self.device)
             
-            x, y, u = self.window_squence(series)
+            # Generate the windows
+            x, y, u = self.window_squence(series, self.input_window, self.output_window, self.stride)
             
+            # Save the mini-batches of the sequence
             self.x.append(x)
             self.y.append(y)
             self.u.append(u)
+
+        self.x = torch.cat(self.x, dim=0)
+        self.y = torch.cat(self.y, dim=0)
+        self.u = torch.cat(self.u, dim=0)
 
         # Get the total number of sequences in the dataset
         self.num_sequences = len(self.x)
