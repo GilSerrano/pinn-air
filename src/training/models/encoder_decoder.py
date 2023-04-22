@@ -178,10 +178,10 @@ class EncoderDecoder(nn.Module):
 
             return outputs
 
-    def compute_loss(self, y, y_hat):
+    def compute_loss(self, x, u, y, y_hat):
 
         # Compute the loss
-        loss = F.mse_loss(y[..., 0:3], y_hat[..., 0:3])
+        loss = 100 * F.mse_loss(y[..., 0:3], y_hat[..., 0:3])
 
         return loss, {}
 

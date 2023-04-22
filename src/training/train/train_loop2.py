@@ -10,11 +10,15 @@ class TrainLoop2(object):
     A trainloop object that handles the training of the model
     """
 
-    def __init__(self, args, model, train_dataloader):
+    def __init__(self, args, model, train_dataloader, validation_dataloader):
 
         # Save the model and training data, validation and test data
         self.model = model
         self.train_dataloader = train_dataloader
+        self.validation_dataloader = validation_dataloader
+
+        self.teacher_ratio = 0.5
+        self.training_mode = "teacher"
 
         # Setup the number of epochs for the training
         self.epochs = torch.arange(1, args.num_steps + 1)
@@ -28,6 +32,7 @@ class TrainLoop2(object):
         # Metrics to save during training as a function of the epochs
         self.train_mean_losses = []
         self.train_mean_individual_losses = []
+        self.validation_mean_losses = []
 
         # Save the index of the best model (the one that has the lowest loss in the validation set)
         self.best_model_idx = 0
@@ -64,10 +69,10 @@ class TrainLoop2(object):
                     x, y, u = batch
 
                     # Perform a forward pass
-                    y_hat = self.model(x, u, y, training_type='teacher', teacher_ratio=0.5)
+                    y_hat = self.model(x, u, y, training_type=self.training_mode, teacher_ratio=self.teacher_ratio)
 
                     # Forward pass
-                    loss, loss_terms = self.model.compute_loss(y, y_hat)
+                    loss, loss_terms = self.model.compute_loss(x, u, y, y_hat)
 
                     # Save the loss of the training on this batch
                     train_loss.append(loss)
@@ -91,9 +96,13 @@ class TrainLoop2(object):
                             loss_terms[key][subkey] = torch.tensor([train_individual_losses[i][key][subkey] for i in range(len(train_individual_losses))]).mean().item()
                     else:
                         loss_terms[key] = torch.tensor([train_individual_losses[i][key] for i in range(len(train_individual_losses))]).mean().item()
-                
+
+                # Compute the MSE and validation loss on the validation set
+                _, loss_val = self.validate()
+
                 # Add the results to the tensorboard
                 self.writer.add_scalar("Loss/train", loss_train, epoch)
+                self.writer.add_scalar("Loss/validation", loss_val, epoch)
 
                 # Add the individual loss terms to the tensorboard
                 for key, value in loss_terms.items():
@@ -106,13 +115,14 @@ class TrainLoop2(object):
                 # Save the loss and mse on the validation set for plotting later on
                 self.train_mean_losses.append(loss_train)
                 self.train_mean_individual_losses.append(loss_terms)
+                self.validation_mean_losses.append(loss_val)
 
                 # Save the current model parameters
                 self.save_model(epoch, loss_train, 0.0, 0.0)
 
                 # Save the best model parameters
-                #if epoch == 1 or (epoch > 1 and mse < self.validation_mse[self.best_model_idx-2]):
-                #    self.best_model_idx = epoch
+                if epoch == 1 or (epoch > 1 and loss_val < self.validation_mean_losses[self.best_model_idx-2]):
+                    self.best_model_idx = epoch
 
         # Flush the writer and close it
         self.writer.flush()
@@ -146,14 +156,14 @@ class TrainLoop2(object):
         # Disable gradient tracking on this section
         with torch.no_grad():
 
-            for x, y in dataloader:
+            for x, y, u in dataloader:
                 
                 # Predict the output
-                y_hat = self.model(x)
+                y_hat = self.model(x, u, y, training_type=self.training_mode, teacher_ratio=self.teacher_ratio)
 
                 # Compute the loss over the validation set
                 if compute_loss:
-                    total_loss, _ = self.model.compute_loss(x, y, y_hat)
+                    total_loss, _ = self.model.compute_loss(x, u, y, y_hat)
                     loss.append(total_loss)
             
                 # Save the predictions and the expected output
@@ -163,8 +173,8 @@ class TrainLoop2(object):
                 y_true += [torch.flatten(y)]
 
         # Create the torch tensors from the lists (and make sure they are in the right device)
-        y_pred = torch.cat(y_pred, 0).to(self.model.device)
-        y_true = torch.cat(y_true, 0).to(self.model.device)
+        y_pred = torch.cat(y_pred, 0).to(x.device)
+        y_true = torch.cat(y_true, 0).to(x.device)
 
         # Compute the MSE and return its value, along with the loss (if requested)
         return F.mse_loss(y_pred, y_true), torch.tensor(loss).mean().item()
