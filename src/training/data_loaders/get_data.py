@@ -11,7 +11,7 @@ from .mocap_dataset import RealMocap
 # A dicitionary of the datasets available
 datasets = {
     "sim_circles": SimCircles, 
-    "mocap_14_04_2023": RealMocap
+    "mocap_14_04_2023": RealMocap,
 }
 
 def get_dataset_class(name):
