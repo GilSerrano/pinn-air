@@ -6,7 +6,7 @@ from train.train_loop2 import TrainLoop2
 from models.encoder_decoder import EncoderDecoder
 
 from data_loaders import get_dataset_loader
-from data_loaders.mocap_full_sequences_dataset import MocapSwipeLoader
+from data_loaders.mocap_swipe_loader import MocapSwipeLoader
 from utils import fix_seed, train_args, check_save_directory
 
 import matplotlib.pyplot as plt
@@ -35,13 +35,15 @@ def main():
     args.dataset = "mocap_14_04_2023"
     args.data_dir = os.path.abspath("./dataset")
 
+    dataset = MocapSwipeLoader(input_window=10, output_window=5, stride=1, split="train", device=args.device)
+
     loader = DataLoader(
-        TrainLoop2,                                              # The dataset itself
+        dataset,                                                 # The dataset itself
         batch_size=args.batch_size,                              # The size of each batch
         shuffle=False,                                           # Whether to shuffle the sequences on the dataset
         num_workers=0,                                           # The number of cpu to use to load the dataset and generate the batches in parallel
         drop_last=False,                                         # Drop the last samples if not enough to make a batch of the desired size
-        collate_fn=lambda x: TrainLoop2.collate(x, args.device), # Custom collate function for the dataset
+        collate_fn=lambda x: dataset.collate(x, args.device),    # Custom collate function for the dataset
         multiprocessing_context=None
     )
 

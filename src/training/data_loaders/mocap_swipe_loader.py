@@ -23,22 +23,18 @@ class MocapSwipeLoader(data.Dataset):
     p_load (dim=3), attitude_load(dim=3)              # position and attitude of the payload
     """
 
-    def __init__(self, dataset_path='', split="test", device="cpu"):
-        """Initializes the Simulation dataset class
+    def __init__(self, input_window, output_window, stride, dataset_path='', split="test", device="cpu"):
 
-        Args:
-            dataset_path (str): Path to the dataset
-            split (str): If the split is the training, validation, or test split
-            lookback (int): Size of window of samples x[0]...  x[lookback-1] to give to the network for it to give predictions upon
-            pooled_classification (bool): Wether we expect the network to output a classification or a regression. I.e. if we should only produce y[lookback] or y[1]...y[lookback]
-            device (str, optional): _description_. Defaults to "cpu".
-        """
         
         # If not path if given, use the default path for the dataset
         if dataset_path == '':
             dataset_path='./dataset/mocap_14_04_2023'
         
         print('Loading dataset: ' + dataset_path)
+
+        self.input_window = input_window
+        self.output_window = output_window
+        self.stride = stride
 
         # Define the device where the data will be stored
         self.device = device
@@ -98,26 +94,65 @@ class MocapSwipeLoader(data.Dataset):
         # Define the complete sequences with the right features
         # (input of network)  -> x (batch_size, time, 17)
         self.x = []
-        self.time = []
+        self.y = []
+        self.u = []
 
         for timeseries in self.dataset.values():
             
             # Get only the features that we care about
-            # The states that we really care about (x[k]=[p,v,R], u[k]=[w_ref, T_ref], x_payload[k]=[p] )
-            #         Dimension:        3       ,        3       ,          4            ,        3           ,        1           ,        3       
-            self.x.append(torch.cat([timeseries["p"], timeseries["v"], timeseries["attitude"], timeseries["w_ref"], timeseries["T_ref"], timeseries["p_load"]], dim=-1).to(self.device))
-            self.x[-1].unsqueeze_(0)
+            # The states that we really care about (x[k]=[p,v,R, p_load], u[k]=[w_ref, T_ref])
+            #             Dimension:        3       ,        3       ,          4            ,        3            ,        3           ,        1                 
+            series = torch.cat([timeseries["p"], timeseries["v"], timeseries["attitude"], timeseries["p_load"], timeseries["w_ref"], timeseries["T_ref"]], dim=-1).to(self.device)
+            
+            x, y, u = self.window_squence(series)
+            
+            self.x.append(x)
+            self.y.append(y)
+            self.u.append(u)
 
-            self.time.append(timeseries["time"].to(self.device))
+        # Get the total number of sequences in the dataset
+        self.num_sequences = len(self.x)
 
-        # Now we must break the sequences into:
+    def window_squence(self, timeseries, input_window, output_window, stride):
+        # ------------------------------------------------------------------------------
+        # We must break the sequences into windows:
         # x (time_len, 17) input of the network up until timestep T
         # y (prediction_len, 13) expected prediction from T+1 until T+prediction_len
         # u (prediction_len, 4) the inputs of the system from T+1 until T+prediction_len
+        # ------------------------------------------------------------------------------
         
+        # Get the total length of the sequence
+        total_length = timeseries.shape[0]
 
+        # Get the mini-batch size
+        size_mini_batch = (total_length - input_window - output_window) // stride + 1
 
+        # Create the sequence that is used as the input of the network
+        x = torch.zeros((size_mini_batch, input_window, 17))
 
+        # Create the sequence that is used as the target of the network + the inputs of the system associated with those targets
+        y = torch.zeros((size_mini_batch, output_window, 13))
+        u = torch.zeros((size_mini_batch, output_window, 4))
+
+        for i in np.arange(size_mini_batch):
+            
+            # Get the start and end index of the window for the input
+            start_x = stride * i
+            end_x = start_x + input_window
+            
+            # Fill the input of the network
+            x[i,:,:] = timeseries[start_x:end_x, :]
+
+            # Get the start and end index of the window for the output
+            start_y = stride * i + input_window
+            end_y = start_y + output_window
+
+            # Fill the target of the network
+            # TODO - check if we need to swipe u 1 unit to the left
+            y[i,:,:] = timeseries[start_y:end_y, 0:13]
+            u[i,:,:] = timeseries[start_y:end_y, 13:17]
+
+        return x, y, u
 
     def __len__(self):
         """Returns the length of the dataset."""
@@ -136,16 +171,39 @@ class MocapSwipeLoader(data.Dataset):
             x[k] = [p[k], v[k], R[k], w_ref[k], T_ref[k], p_load[k]]
 
             Content of the target tensor:
-            y[k] = [p[k+1], v[k+1], R[k+1], w_ref[k+1], T_ref[k+1], p_load[k+1]]
+            y[k] = [p[k+1], v[k+1], R[k+1], p_load[k+1]]
+            u[k] = [w_ref[k+1], T_ref[k+1]
         
         """
         # Convert back the list of tensors to a single tensor
-        return self.x[index], self.time[index]
+        return self.x[index], self.y[index], self.u[index]
+    
+    @staticmethod
+    def collate(batch, device):
+
+        # In this function we want to create a tensor of dimensions (batch_size, max_seq_len, 13)
+        x = []
+        y = []
+        u = []
+
+        # Get the timeseries from the batch
+        for data in batch:
+            x += [data[0]]
+            y += [data[1]]
+            u += [data[2]]
+
+        return torch.stack(x, dim=0).to(device), torch.stack(y, dim=0).to(device), torch.stack(u, dim=0).to(device)
         
 
 if __name__ == "__main__":
 
-    dataset = MocapSwipeLoader(device="cuda")
+    dataset = MocapSwipeLoader(device="cpu")
+    
+    print(len(dataset))
+
+    x, y, u = dataset[0]
 
     # Get the first 2 samples from the dataset to generate a batch
-    print(dataset[0][1].shape)
+    print(x.shape)
+    print(y.shape)
+    print(u.shape)
