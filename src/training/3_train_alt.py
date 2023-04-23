@@ -3,12 +3,16 @@ import os
 import torch
 from torch.utils.data import DataLoader
 from train.train_loop2 import TrainLoop2
-from models.encoder_decoder import EncoderDecoder
+from models.encoder_decoder2 import EncoderDecoder
 
 from data_loaders.mocap_swipe_loader import MocapSwipeLoader
 from utils import fix_seed, train_args, check_save_directory
 
 import matplotlib.pyplot as plt
+
+from utils import fix_seed
+
+fix_seed(0)
 
 def main():
     """
@@ -34,8 +38,8 @@ def main():
     args.dataset = "mocap_14_04_2023"
     args.data_dir = os.path.abspath("./dataset")
 
-    train_dataset = MocapSwipeLoader(input_window=5, output_window=10, stride=1, split="train", device=args.device)
-    validation_dataset = MocapSwipeLoader(input_window=5, output_window=10, stride=1, split="val", device=args.device)
+    train_dataset = MocapSwipeLoader(input_window=50, output_window=50, stride=1, split="train", device=args.device)
+    validation_dataset = MocapSwipeLoader(input_window=50, output_window=50, stride=1, split="val", device=args.device)
 
     loader = DataLoader(
         train_dataset,                                                 # The dataset itself
@@ -58,7 +62,7 @@ def main():
     )
 
     # Create the model
-    model = EncoderDecoder(input_size=17, hidden_size=2, target_size=13)
+    model = EncoderDecoder(input_size=3, hidden_size=20, target_size=3)
     
     # Train the model
     train_loop = TrainLoop2(args, model, loader, validation_loader)
@@ -67,7 +71,7 @@ def main():
     # ------------------
     # Test the model
     # ------------------
-    test_dataset = MocapSwipeLoader(input_window=20, output_window=30, stride=1, split="test", device=args.device)
+    test_dataset = MocapSwipeLoader(input_window=50, output_window=50, stride=1, split="test", device=args.device)
 
     loader = DataLoader(
         test_dataset,                                                 # The dataset itself
@@ -79,12 +83,11 @@ def main():
         multiprocessing_context=None
     )
 
-    x, y, u = test_dataset[0]
+    x, y = train_dataset[0]
     print(x.shape)
     print(y.shape)
-    print(u.shape)
 
-    y_hat = train_loop.model.predict_sequence_recursively(x.unsqueeze(0), u.unsqueeze(0))
+    y_hat = train_loop.model.predict_sequence_recursively(x.unsqueeze(0))
 
     time = torch.arange(0, x.shape[0] + y.shape[0]).numpy(force=True)
 

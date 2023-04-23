@@ -80,7 +80,7 @@ class EncoderDecoder(nn.Module):
         self.decoder = Decoder(input_size, hidden_size, target_size)
 
 
-    def forward(self, x, u, y, training_type='teacher', teacher_ratio=0.3):
+    def forward(self, x, y, training_type='teacher', teacher_ratio=0.3):
         """
         Args:
             x (torch.Tensor): The input to the network of shape (batch, timeseries_len, features)
@@ -116,7 +116,7 @@ class EncoderDecoder(nn.Module):
                 outputs[:, t, :] = decoder_output
 
                 # Concatenate the predicted output (which is the next timestep state) with the input angular velocity and thrust of the vehicle
-                decoder_input = torch.cat((decoder_output, u[:, t, :]), dim=-1).unsqueeze(1)
+                decoder_input = decoder_output.unsqueeze(1)
 
         # When using teacher forcing, we will use the target data as the input to the decoder in the next time step
         # instead of using the output from the previous time step
@@ -127,22 +127,23 @@ class EncoderDecoder(nn.Module):
                 outputs[:, t, :] = decoder_output
 
                 # Concatenate the next real timestep state with the input angular velocity and thrust of the vehicle
-                decoder_input = torch.cat((y[:, t, :], u[:, t, :]), dim=-1).unsqueeze(1)
+                decoder_input = y[:, t, :]
 
         elif training_type == "mixed":
             for t in range(target_len):
+
                 decoder_output, decoder_hidden = self.decoder(decoder_input, decoder_hidden)
                 outputs[:, t, :] = decoder_output
 
                 # Check in the next timestep whether we want to use teacher forcing or not for the prediction
                 if random.random() < teacher_ratio:
-                    decoder_input = torch.cat((y[:, t, :], u[:, t, :]), dim=-1).unsqueeze(1)
+                    decoder_input = y[:, t, :].unsqueeze(1)
                 else:
-                    decoder_input = torch.cat((decoder_output, u[:, t, :]), dim=-1).unsqueeze(1)
+                    decoder_input = decoder_output.unsqueeze(1)
         
         return outputs
 
-    def predict_sequence_recursively(self, x, u):
+    def predict_sequence_recursively(self, x):
         """
         Args:
             x (torch.Tensor): The input to the network of shape (batch, timeseries_len, features)
@@ -174,30 +175,13 @@ class EncoderDecoder(nn.Module):
                 outputs[:, t, :] = decoder_output
 
                 # Concatenate the predicted output (which is the next timestep state) with the input angular velocity and thrust of the vehicle
-                decoder_input = torch.cat((decoder_output, u[:, t, :]), dim=-1).unsqueeze(1)
+                decoder_input = decoder_output.unsqueeze(1)
 
             return outputs
 
-    def compute_loss(self, x, u, y, y_hat):
+    def compute_loss(self, y, y_hat):
 
         # Compute the loss
         loss = F.mse_loss(y, y_hat)
 
         return loss, {}
-
-
-if __name__ == "__main__":
-
-    # Create the model
-    model = EncoderDecoder(input_size=17, hidden_size=20, target_size=13)
-
-    # Create a random input tensor
-    x = torch.randn(32, 10, 17)         # (batch, timeseries_input_len, features)
-
-    # Create a random target tensor and inputs after the encoder
-    y = torch.randn(32, 5, 13)          # (batch, timeseries_target_len, target_features)
-    u = torch.randn(32, 5, 4)           # (batch, timeseries_target_len, [wx,wy,wz,T])
-
-    model(x, u, y, training_type='mixed', teacher_ratio=0.3)
-    output = model.predict_sequence_recursively(x, u)
-    print(output.shape)

@@ -7,21 +7,7 @@ from os.path import join as pjoin
 
 
 class MocapSwipeLoader(data.Dataset):
-    """
-    Base class for real datasets acquired in the Taguspark MOCAP arena
-    with drone + payload 
 
-    It is assumed that each timeseries contains: 
-    t_sampling (float)                                # sampling period of the system
-    time (dim=1),                                     # time of the system
-    p (dim=3), v (dim=3), a (dim=3),                  # position velocity and acceleration of the system
-    attitude (dim=4), w (dim=3),                      # attitude quaternion and angular velocity of the system
-    p_ref (dim=3), v_ref (dim=3), a_ref (dim=3),      # reference position, velocity and acceleration
-    w_ff (dim=3)                                      # reference angular velocity computed directly only from the trajectory based on the reference jerk (not applied directly)
-    attitude_ref (dim=4), w_ref (dim=3),              # reference attitude quaternion and angular velocity for the vehicle to track
-    T_ref (dim=1)                                     # reference thrust
-    p_load (dim=3), attitude_load(dim=3)              # position and attitude of the payload
-    """
 
     def __init__(self, input_window, output_window, stride, dataset_path='', split="test", device="cpu"):
 
@@ -95,26 +81,23 @@ class MocapSwipeLoader(data.Dataset):
         # (input of network)  -> x (batch_size, time, 17)
         self.x = []
         self.y = []
-        self.u = []
 
         for timeseries in self.dataset.values():
             
             # Get only the features that we care about
             # The states that we really care about (x[k]=[p,v,R, p_load], u[k]=[w_ref, T_ref])
-            #             Dimension:        3       ,        3       ,          4            ,        3            ,        3           ,        1                 
-            series = torch.cat([timeseries["p"], timeseries["v"], timeseries["attitude"], timeseries["p_load"], timeseries["w_ref"], timeseries["T_ref"]], dim=-1).to(self.device)
+            #             Dimension:        3
+            series = torch.cat([timeseries["p"]], dim=-1).to(self.device)
             
             # Generate the windows
-            x, y, u = self.window_squence(series, self.input_window, self.output_window, self.stride)
+            x, y = self.window_squence(series, self.input_window, self.output_window, self.stride)
             
             # Save the mini-batches of the sequence
             self.x.append(x)
             self.y.append(y)
-            self.u.append(u)
 
         self.x = torch.cat(self.x, dim=0)
         self.y = torch.cat(self.y, dim=0)
-        self.u = torch.cat(self.u, dim=0)
 
         # Get the total number of sequences in the dataset
         self.num_sequences = len(self.x)
@@ -134,11 +117,10 @@ class MocapSwipeLoader(data.Dataset):
         size_mini_batch = (total_length - input_window - output_window) // stride + 1
 
         # Create the sequence that is used as the input of the network
-        x = torch.zeros((size_mini_batch, input_window, 17))
+        x = torch.zeros((size_mini_batch, input_window, 3))
 
         # Create the sequence that is used as the target of the network + the inputs of the system associated with those targets
-        y = torch.zeros((size_mini_batch, output_window, 13))
-        u = torch.zeros((size_mini_batch, output_window, 4))
+        y = torch.zeros((size_mini_batch, output_window, 3))
 
         for i in np.arange(size_mini_batch):
             
@@ -155,10 +137,9 @@ class MocapSwipeLoader(data.Dataset):
 
             # Fill the target of the network
             # TODO - check if we need to swipe u 1 unit to the left
-            y[i,:,:] = timeseries[start_y:end_y, 0:13]
-            u[i,:,:] = timeseries[start_y:end_y, 13:17]
+            y[i,:,:] = timeseries[start_y:end_y, :]
 
-        return x, y, u
+        return x, y
 
     def __len__(self):
         """Returns the length of the dataset."""
@@ -182,7 +163,7 @@ class MocapSwipeLoader(data.Dataset):
         
         """
         # Convert back the list of tensors to a single tensor
-        return self.x[index], self.y[index], self.u[index]
+        return self.x[index], self.y[index]
     
     @staticmethod
     def collate(batch, device):
@@ -190,15 +171,13 @@ class MocapSwipeLoader(data.Dataset):
         # In this function we want to create a tensor of dimensions (batch_size, max_seq_len, 13)
         x = []
         y = []
-        u = []
 
         # Get the timeseries from the batch
         for data in batch:
             x += [data[0]]
             y += [data[1]]
-            u += [data[2]]
 
-        return torch.stack(x, dim=0).to(device), torch.stack(y, dim=0).to(device), torch.stack(u, dim=0).to(device)
+        return torch.stack(x, dim=0).to(device), torch.stack(y, dim=0).to(device)
         
 
 if __name__ == "__main__":

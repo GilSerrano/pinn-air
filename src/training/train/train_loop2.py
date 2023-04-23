@@ -18,7 +18,7 @@ class TrainLoop2(object):
         self.validation_dataloader = validation_dataloader
 
         self.teacher_ratio = 0.5
-        self.training_mode = "teacher"
+        self.training_mode = "recursive"
 
         # Setup the number of epochs for the training
         self.epochs = torch.arange(1, args.num_steps + 1)
@@ -66,13 +66,13 @@ class TrainLoop2(object):
                     self.optimizer.zero_grad()
 
                     # Get the input of the network and the expect output from the batch
-                    x, y, u = batch
+                    x, y = batch
 
                     # Perform a forward pass
-                    y_hat = self.model(x, u, y, training_type=self.training_mode, teacher_ratio=self.teacher_ratio)
+                    y_hat = self.model(x, y, training_type=self.training_mode, teacher_ratio=self.teacher_ratio)
 
                     # Forward pass
-                    loss, loss_terms = self.model.compute_loss(x, u, y, y_hat)
+                    loss, loss_terms = self.model.compute_loss(y, y_hat)
 
                     # Save the loss of the training on this batch
                     train_loss.append(loss)
@@ -98,11 +98,11 @@ class TrainLoop2(object):
                         loss_terms[key] = torch.tensor([train_individual_losses[i][key] for i in range(len(train_individual_losses))]).mean().item()
 
                 # Compute the MSE and validation loss on the validation set
-                _, loss_val = self.validate()
+                #_, loss_val = self.validate()
 
                 # Add the results to the tensorboard
                 self.writer.add_scalar("Loss/train", loss_train, epoch)
-                self.writer.add_scalar("Loss/validation", loss_val, epoch)
+                #self.writer.add_scalar("Loss/validation", loss_val, epoch)
 
                 # Add the individual loss terms to the tensorboard
                 for key, value in loss_terms.items():
@@ -115,14 +115,14 @@ class TrainLoop2(object):
                 # Save the loss and mse on the validation set for plotting later on
                 self.train_mean_losses.append(loss_train)
                 self.train_mean_individual_losses.append(loss_terms)
-                self.validation_mean_losses.append(loss_val)
+                #self.validation_mean_losses.append(loss_val)
 
                 # Save the current model parameters
                 self.save_model(epoch, loss_train, 0.0, 0.0)
 
                 # Save the best model parameters
-                if epoch == 1 or (epoch > 1 and loss_val < self.validation_mean_losses[self.best_model_idx-2]):
-                    self.best_model_idx = epoch
+                #if epoch == 1 or (epoch > 1 and loss_val < self.validation_mean_losses[self.best_model_idx-2]):
+                #    self.best_model_idx = epoch
 
         # Flush the writer and close it
         self.writer.flush()
