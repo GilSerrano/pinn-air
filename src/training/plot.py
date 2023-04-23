@@ -8,7 +8,7 @@ from main import model, load_best_model, train_dataset, target_time
 # Load the model
 target_time = 25
 
-best_model = torch.load("output/best_model_idx.pth.tar")
+best_model = torch.load("output2/best_model_idx.pth.tar")
 best_model_idx = best_model["best_model_idx"]
 
 load_best_model(best_model_idx)

@@ -32,21 +32,28 @@ class SuperModelo(nn.Module):
         self.lstm = nn.LSTM(300, 15, batch_first=True)
         self.linear = nn.Linear(15, 300)
 
-        self.linear_out = nn.Linear(300, 3)
+        self.linear_out = nn.Linear(300, 200)
+        self.linear_out2 = nn.Linear(200, 100)
+        self.linear_out3 = nn.Linear(100, 3)
 
     def forward(self, x, target_time):
 
         outputs = torch.zeros(x.shape[0], target_time, x.shape[2]).to("cuda")
 
-        x = self.input_linear(x)
-        x = self.input_linear2(x)
-        x = self.input_linear3(x)
+        x = F.relu(self.input_linear(x))
+        x = F.relu(self.input_linear2(x))
+        x = F.relu(self.input_linear3(x))
 
         # Pass the previous sequence through the lstm
         lstm_out, hidden = self.lstm(x)
         lstm_out = self.linear(lstm_out[:, -1, :])
         lstm_out = lstm_out[:,None,:]
-        output = self.linear_out(lstm_out)
+
+
+        # Save the output of the first sequence
+        output = F.relu(self.linear_out(lstm_out))
+        output = F.relu(self.linear_out2(output))
+        output = self.linear_out3(output)
         outputs[:,0,:] = output[:,-1,:]
 
         # Predict the next sequence recursively
@@ -55,7 +62,10 @@ class SuperModelo(nn.Module):
             lstm_out, hidden = self.lstm(lstm_out, hidden)
             lstm_out = self.linear(lstm_out[:,-1,:])
 
-            output = self.linear_out(lstm_out)
+            # Save the ouput of the current sequence
+            output = F.relu(self.linear_out(lstm_out))
+            output = F.relu(self.linear_out2(output))
+            output = self.linear_out3(output)
             outputs[:,i,:] = output
             lstm_out = lstm_out[:,None,:]
 
@@ -65,7 +75,7 @@ torch.set_default_device("cuda")
 model = SuperModelo().to("cuda")
 optimizer = AdamW(model.parameters(), lr=1E-4, weight_decay=0.05)
 
-writer = SummaryWriter(log_dir="output")
+writer = SummaryWriter(log_dir="output2")
 
 target_time = 25
 
@@ -94,7 +104,7 @@ validation_loader = DataLoader(
 epochs = torch.arange(0, 1000, 1)
 
 
-def save_model(epoch, train_loss, val_loss, save_dir="output/"):
+def save_model(epoch, train_loss, val_loss, save_dir="output2/"):
 
     checkpoint_path = os.path.join(save_dir, 'checkpoint_{:04d}.pth.tar'.format(epoch))
     print('Saving checkpoint {}'.format(checkpoint_path))
@@ -108,7 +118,7 @@ def save_model(epoch, train_loss, val_loss, save_dir="output/"):
         "optimizer": optimizer.state_dict()
     }, checkpoint_path)
 
-def save_best_model_idx(epoch, val_loss, save_dir="output/"):
+def save_best_model_idx(epoch, val_loss, save_dir="output2/"):
 
     checkpoint_path = os.path.join(save_dir, 'best_model_idx.pth.tar')
     print('Saving checkpoint {}'.format(checkpoint_path))
@@ -116,7 +126,7 @@ def save_best_model_idx(epoch, val_loss, save_dir="output/"):
     # Save the current model
     torch.save({"best_model_idx": best_model_idx, "best_val_loss": best_val_loss,}, checkpoint_path)
 
-def load_best_model(epoch, save_dir="output/"):
+def load_best_model(epoch, save_dir="output2/"):
     
     checkpoint_path = os.path.join(save_dir, 'checkpoint_{:04d}.pth.tar'.format(epoch))
     print("Loading: {}".format(checkpoint_path))
