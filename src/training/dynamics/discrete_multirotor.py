@@ -49,27 +49,11 @@ class DiscreteMultirotor:
              x=(batch, time_series_length, len(state))
              u=(batch, time_series_length, len(input))
 
-             sequencia de input
-             4000 5 17
-
-             output da rede
-             4000 1 13
-
-              x[0], x[1], x[2], x[3], x[4] -> x[1], x[2], x[3], x[4], x[5]
-
-              x = 4000 5 13
-              u = 4000 5 4     -> 4000 5 13
-
-              (4000 1 13) - (:, -1, :)
-
-            output 
-            4000 5 14
-
         Args:
             x (torch.Tensor): The state of the system at the previous time-step, i.e. x[k-1]
-                x[k-1] = [x,y,z | v_x, v_y,v_z | q_x, q_y, q_z, q_w]
+                x[k-1] = [x,y,z | v_x, v_y,v_z | q_w, q_x, q_y, q_z]
             u (torch.Tensor): The input of the system at the current time-step, i.e. u[k]
-                u[k] = [w_x, w_y, w_z | T]  
+                u[k] = [w_x, w_y, w_z | T]
         Returns:
             torch.Tensor: The state of the system at the current time-step, i.e. x[k]
         """
@@ -79,12 +63,14 @@ class DiscreteMultirotor:
         # -----------------------------------------------------
         
         # 1) Convert the quaternion to a rotation matrix (this can be simplified) 
-        # Note that we receive the quaternion in the [qx, qx, qy, qw] convention
+        # Note that we receive the quaternion in the [qw, qx, qx, qy] convention
         rot = quaternion_to_matrix(x[..., 6:10])
 
         # Generate the thrust vector (in order to handle batches and sequences)
         u_shape = list(u.shape[:-1]) + [3]                  # (batch_size, sequence_size, 3)
+
         total_thrust = torch.zeros(size=u_shape)
+
         total_thrust[..., 2] = u[..., 3]                    # Vectors of the type (batch_size, time_sequence, [0.0, 0.0, total_thrust])
 
         # 2) Compute the reference linear acceleration that the linear system is supposed to track
@@ -104,10 +90,10 @@ class DiscreteMultirotor:
         skew = skew_symmetric(u[..., 0:3])
 
         # 2) Compute the new rotation matrix R[k+1]
-        new_R = rot * torch.matrix_exp(self.Ts * skew)
+        new_R = torch.matmul(rot, torch.matrix_exp(self.Ts * skew))
 
         # 3) Generate the new quaternion from the rotation matrix
-        # Note that we produce a quaternion in the [qx, qy, qz, qw] convention
+        # Note that we produce a quaternion in the [qw, qx, qy, qz] convention
         new_q = matrix_to_quaternion(new_R)
 
         # -----------------------------------------------------

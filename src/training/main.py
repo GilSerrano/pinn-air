@@ -12,6 +12,7 @@ import matplotlib.pyplot as plt
 from utils.fix_seed import fix_seed
 
 from dynamics.utils import quaternion_multiply, quaternion_invert
+from dynamics.discrete_multirotor import DiscreteMultirotor
 
 
 from torch.utils.tensorboard import SummaryWriter
@@ -76,6 +77,8 @@ class SuperModelo(nn.Module):
 torch.set_default_device("cuda")
 model = SuperModelo().to("cuda")
 optimizer = AdamW(model.parameters(), lr=1E-4, weight_decay=0.05)
+Ts = 0.03
+physics_model = DiscreteMultirotor(Ts, 1.0, "cuda")
 
 writer = SummaryWriter(log_dir="output5")
 
@@ -174,6 +177,25 @@ def quaternion_norm(y_hat):
     
     return torch.sum((quat_norm - one) ** 2)
 
+def physics_error(y_hat, x, y, target_time, physics_model):
+
+    # Create an empty tensor to store the predictions
+    physics_pred = torch.zeros(x.shape[0], target_time, 10).to("cuda")
+
+    # Compute the first prediction of the physical model
+    #physics_pred[:, 0, :] = physics_model.run(x=x[:, -1, 0:10].unsqueeze(1), u=x[:,-1, 13:17].unsqueeze(1))
+
+    # Compute the rest of the predictions of the physical model
+    physics_pred[:,1:,:] = physics_model.run(x=y[..., 0:10], u=y[..., 13:17])
+
+    # Compute the error between the predicted and the physical model
+    pos_error = position_error(y_hat, physics_pred, target_time)
+    vel_error = velocity_error(y_hat, physics_pred, target_time)
+    quat_error = quaternion_error(y_hat, physics_pred, target_time)
+
+    return pos_error + vel_error + quat_error
+
+
 def continuity_last_input_first_output(y_hat, x):
     return torch.sum(torch.norm(y_hat[:, 0, :] - x[:, -1, :], dim=1) **2, dim=0)
 
@@ -185,14 +207,15 @@ def output_continuity(y_hat):
 
     return total_loss
 
-def compute_loss(y_hat, y, x, target_time):
+def compute_loss(y_hat, y, x, target_time, physics_model):
 
     return position_error(y_hat, y, target_time) + \
         velocity_error(y_hat, y, target_time) + \
         100 * continuity_last_input_first_output(y_hat, x) + \
         output_continuity(y_hat) + \
         100 * quaternion_norm(y_hat) + \
-        quaternion_error(y_hat, y, target_time)
+        quaternion_error(y_hat, y, target_time) + \
+        physics_error(y_hat, x, y, target_time, physics_model)
     
 
 if __name__ == "__main__":
@@ -229,7 +252,7 @@ if __name__ == "__main__":
                 # --------------------------------------
                 # LOSS
                 # --------------------------------------
-                total_loss = compute_loss(y_hat, y, x, target_time)
+                total_loss = compute_loss(y_hat, y, x, target_time, physics_model)
 
                 # --------------------------------------
                 train_loss.append(total_loss.item())
@@ -250,7 +273,7 @@ if __name__ == "__main__":
                 # Perform a forward pass
                 y_hat = model(x, target_time)
 
-                total_val_loss = compute_loss(y_hat, y, x, target_time)
+                total_val_loss = compute_loss(y_hat, y, x, target_time, physics_model)
 
                 val_loss.append(total_val_loss.item())
         

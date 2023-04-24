@@ -90,7 +90,6 @@ class MocapSwipeLoader(data.Dataset):
 
             # Note: the quaternion saved in the npz files are in the standard (x,y,z,w) format
             # but we want to convert to the (w,x,y,z) format
-            print(timeseries["attitude"].shape)
             timeseries["attitude"] = torch.cat([timeseries["attitude"][...,3:4], timeseries["attitude"][...,0:3]], dim=-1)
             series = torch.cat([timeseries["p"], timeseries["v"], timeseries["attitude"], timeseries["p_load"], timeseries["w_ref"], timeseries["T_ref"]], dim=-1).to(self.device)
             
