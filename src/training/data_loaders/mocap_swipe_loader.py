@@ -87,6 +87,11 @@ class MocapSwipeLoader(data.Dataset):
             # Get only the features that we care about
             # The states that we really care about (x[k]=[p,v,R, p_load], u[k]=[w_ref, T_ref])
             #             Dimension:        3
+
+            # Note: the quaternion saved in the npz files are in the standard (x,y,z,w) format
+            # but we want to convert to the (w,x,y,z) format
+            print(timeseries["attitude"].shape)
+            timeseries["attitude"] = torch.cat([timeseries["attitude"][...,3:4], timeseries["attitude"][...,0:3]], dim=-1)
             series = torch.cat([timeseries["p"], timeseries["v"], timeseries["attitude"], timeseries["p_load"], timeseries["w_ref"], timeseries["T_ref"]], dim=-1).to(self.device)
             
             # Generate the windows

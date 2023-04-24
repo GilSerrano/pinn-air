@@ -11,6 +11,8 @@ import matplotlib.pyplot as plt
 
 from utils.fix_seed import fix_seed
 
+from dynamics.utils import quaternion_multiply, quaternion_invert
+
 
 from torch.utils.tensorboard import SummaryWriter
 
@@ -75,7 +77,7 @@ torch.set_default_device("cuda")
 model = SuperModelo().to("cuda")
 optimizer = AdamW(model.parameters(), lr=1E-4, weight_decay=0.05)
 
-writer = SummaryWriter(log_dir="output4")
+writer = SummaryWriter(log_dir="output5")
 
 target_time = 25
 
@@ -104,7 +106,7 @@ validation_loader = DataLoader(
 epochs = torch.arange(0, 600, 1)
 
 
-def save_model(epoch, train_loss, val_loss, save_dir="output4/"):
+def save_model(epoch, train_loss, val_loss, save_dir="output5/"):
 
     checkpoint_path = os.path.join(save_dir, 'checkpoint_{:04d}.pth.tar'.format(epoch))
     print('Saving checkpoint {}'.format(checkpoint_path))
@@ -118,7 +120,7 @@ def save_model(epoch, train_loss, val_loss, save_dir="output4/"):
         "optimizer": optimizer.state_dict()
     }, checkpoint_path)
 
-def save_best_model_idx(epoch, val_loss, save_dir="output4/"):
+def save_best_model_idx(epoch, val_loss, save_dir="output5/"):
 
     checkpoint_path = os.path.join(save_dir, 'best_model_idx.pth.tar')
     print('Saving checkpoint {}'.format(checkpoint_path))
@@ -126,7 +128,7 @@ def save_best_model_idx(epoch, val_loss, save_dir="output4/"):
     # Save the current model
     torch.save({"best_model_idx": best_model_idx, "best_val_loss": best_val_loss,}, checkpoint_path)
 
-def load_best_model(epoch, save_dir="output4/"):
+def load_best_model(epoch, save_dir="output5/"):
     
     checkpoint_path = os.path.join(save_dir, 'checkpoint_{:04d}.pth.tar'.format(epoch))
     print("Loading: {}".format(checkpoint_path))
@@ -135,10 +137,42 @@ def load_best_model(epoch, save_dir="output4/"):
     model.load_state_dict(checkpoint['model'])
     optimizer.load_state_dict(checkpoint['optimizer'])
 
+#def continuity_loss(y_hat, y, target_time):
+#    exp_decay = 10 * torch.exp(-0.1*torch.arange(0, target_time, 1)).to("cuda")
+#    return torch.sum((torch.norm(y_hat - y, dim=2) ** 2) * exp_decay)
 
-def continuity_loss(y_hat, y, target_time):
+def position_error(y_hat, y, target_time):
+    
+    # Compute the exponential decay
     exp_decay = 10 * torch.exp(-0.1*torch.arange(0, target_time, 1)).to("cuda")
-    return torch.sum((torch.norm(y_hat - y, dim=2) ** 2) * exp_decay)
+    
+    # Compute the discounted position error
+    return torch.sum((torch.norm(y_hat[:, :, 0:3] - y[:, :, 0:3], dim=2) ** 2) * exp_decay)
+
+def velocity_error(y_hat, y, target_time):
+
+    # Compute the exponential decay
+    exp_decay = 10 * torch.exp(-0.1*torch.arange(0, target_time, 1)).to("cuda")
+
+    # Compute the discounted velocity error
+    return torch.sum((torch.norm(y_hat[:, :, 3:6] - y[:, :, 3:6], dim=2) ** 2) * exp_decay)
+
+def quaternion_error(y_hat, y, target_time):
+
+    # Compute the exponential decay
+    exp_decay = 10 * torch.exp(-0.1*torch.arange(0, target_time, 1)).to("cuda")
+
+    # Compute the discounted quaternion error
+    identity_quaternion = torch.tensor([1.0, 0.0, 0.0, 0.0]).to("cuda")
+
+    return torch.sum((torch.norm(quaternion_multiply(y[..., 6:10], quaternion_invert(y_hat[..., 6:10])) - identity_quaternion, dim=2) ** 2) * exp_decay)
+
+def quaternion_norm(y_hat):
+
+    quat_norm = y_hat[..., 6:10].norm(p=2, dim=-1)
+    one = torch.ones_like(quat_norm)
+    
+    return torch.sum((quat_norm - one) ** 2)
 
 def continuity_last_input_first_output(y_hat, x):
     return torch.sum(torch.norm(y_hat[:, 0, :] - x[:, -1, :], dim=1) **2, dim=0)
@@ -153,9 +187,13 @@ def output_continuity(y_hat):
 
 def compute_loss(y_hat, y, x, target_time):
 
-    return continuity_loss(y_hat, y, target_time) + \
+    return position_error(y_hat, y, target_time) + \
+        velocity_error(y_hat, y, target_time) + \
         100 * continuity_last_input_first_output(y_hat, x) + \
-        output_continuity(y_hat)
+        output_continuity(y_hat) + \
+        100 * quaternion_norm(y_hat) + \
+        quaternion_error(y_hat, y, target_time)
+    
 
 if __name__ == "__main__":
     
@@ -229,8 +267,8 @@ if __name__ == "__main__":
             best_val_loss = torch.tensor(val_loss).mean()
             best_model_idx = epoch
 
-    # Save the index of the best model
-    save_best_model_idx(best_model_idx, best_val_loss)
+            # Save the index of the best model
+            save_best_model_idx(best_model_idx, best_val_loss)
 
     # Load the best model
     load_best_model(best_model_idx)
