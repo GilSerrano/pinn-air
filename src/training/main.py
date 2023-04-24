@@ -25,16 +25,16 @@ class SuperModelo(nn.Module):
         # NOTA: adicionar relus no input? no output nao, porque podemos ter valores negativos no output
         
         # Input size and hidden size
-        self.input_linear = nn.Linear(3, 100)
+        self.input_linear = nn.Linear(17, 100)
         self.input_linear2 = nn.Linear(100, 200)
         self.input_linear3 = nn.Linear(200, 300)
 
-        self.lstm = nn.LSTM(300, 15, batch_first=True)
-        self.linear = nn.Linear(15, 300)
+        self.lstm = nn.LSTM(300, 20, batch_first=True)
+        self.linear = nn.Linear(20, 300)
 
         self.linear_out = nn.Linear(300, 200)
         self.linear_out2 = nn.Linear(200, 100)
-        self.linear_out3 = nn.Linear(100, 3)
+        self.linear_out3 = nn.Linear(100, 17)
 
     def forward(self, x, target_time):
 
@@ -75,7 +75,7 @@ torch.set_default_device("cuda")
 model = SuperModelo().to("cuda")
 optimizer = AdamW(model.parameters(), lr=1E-4, weight_decay=0.05)
 
-writer = SummaryWriter(log_dir="output2")
+writer = SummaryWriter(log_dir="output4")
 
 target_time = 25
 
@@ -101,10 +101,10 @@ validation_loader = DataLoader(
             collate_fn=lambda x: validation_dataset.collate(x, "cuda"),    # Custom collate function for the dataset
             multiprocessing_context=None)
 
-epochs = torch.arange(0, 1000, 1)
+epochs = torch.arange(0, 600, 1)
 
 
-def save_model(epoch, train_loss, val_loss, save_dir="output2/"):
+def save_model(epoch, train_loss, val_loss, save_dir="output4/"):
 
     checkpoint_path = os.path.join(save_dir, 'checkpoint_{:04d}.pth.tar'.format(epoch))
     print('Saving checkpoint {}'.format(checkpoint_path))
@@ -118,7 +118,7 @@ def save_model(epoch, train_loss, val_loss, save_dir="output2/"):
         "optimizer": optimizer.state_dict()
     }, checkpoint_path)
 
-def save_best_model_idx(epoch, val_loss, save_dir="output2/"):
+def save_best_model_idx(epoch, val_loss, save_dir="output4/"):
 
     checkpoint_path = os.path.join(save_dir, 'best_model_idx.pth.tar')
     print('Saving checkpoint {}'.format(checkpoint_path))
@@ -126,7 +126,7 @@ def save_best_model_idx(epoch, val_loss, save_dir="output2/"):
     # Save the current model
     torch.save({"best_model_idx": best_model_idx, "best_val_loss": best_val_loss,}, checkpoint_path)
 
-def load_best_model(epoch, save_dir="output2/"):
+def load_best_model(epoch, save_dir="output4/"):
     
     checkpoint_path = os.path.join(save_dir, 'checkpoint_{:04d}.pth.tar'.format(epoch))
     print("Loading: {}".format(checkpoint_path))
@@ -234,33 +234,3 @@ if __name__ == "__main__":
 
     # Load the best model
     load_best_model(best_model_idx)
-
-    # TODO - Load best model and plot it 
-
-        # if epoch >= 1000:
-
-        #     print("----")
-
-        #     for i in range(len(train_dataset)):
-
-        #         x, y = train_dataset[i]
-
-        #         y_hat = model(x[None, :, :], target_time)
-                
-        #         print(y_hat.shape)
-        #         time = torch.arange(0, x.shape[0] + y.shape[0]).numpy(force=True)
-
-        #         # Plot the resulting prediction
-        #         plt.figure()
-        #         plt.plot(time, torch.cat((x[:, 0], y[:, 0]), dim=0).numpy(force=True), label="x")        # x
-        #         plt.plot(time, torch.cat((x[:, 1], y[:, 1]), dim=0).numpy(force=True), label="y")        # y
-        #         plt.plot(time, torch.cat((x[:, 2], y[:, 2]), dim=0).numpy(force=True), label="z")        # z
-
-        #         time2 = torch.arange(x.shape[0], x.shape[0] + y_hat.shape[1]).numpy(force=True)
-        #         plt.plot(time2, y_hat[0, :, 0].numpy(force=True), label="x_hat")        # x
-        #         plt.plot(time2, y_hat[0, :, 1].numpy(force=True), label="y_hat")        # y
-        #         plt.plot(time2, y_hat[0, :, 2].numpy(force=True), label="z_hat")        # z
-
-        #         plt.legend()
-        #         plt.show()
-

@@ -87,7 +87,7 @@ class MocapSwipeLoader(data.Dataset):
             # Get only the features that we care about
             # The states that we really care about (x[k]=[p,v,R, p_load], u[k]=[w_ref, T_ref])
             #             Dimension:        3
-            series = torch.cat([timeseries["p"]], dim=-1).to(self.device)
+            series = torch.cat([timeseries["p"], timeseries["v"], timeseries["attitude"], timeseries["p_load"], timeseries["w_ref"], timeseries["T_ref"]], dim=-1).to(self.device)
             
             # Generate the windows
             x, y = self.window_squence(series, self.input_window, self.output_window, self.stride)
@@ -117,10 +117,10 @@ class MocapSwipeLoader(data.Dataset):
         size_mini_batch = (total_length - input_window - output_window) // stride + 1
 
         # Create the sequence that is used as the input of the network
-        x = torch.zeros((size_mini_batch, input_window, 3))
+        x = torch.zeros((size_mini_batch, input_window, 17))
 
         # Create the sequence that is used as the target of the network + the inputs of the system associated with those targets
-        y = torch.zeros((size_mini_batch, output_window, 3))
+        y = torch.zeros((size_mini_batch, output_window, 17))
 
         for i in np.arange(size_mini_batch):
             
