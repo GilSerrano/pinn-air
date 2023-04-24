@@ -152,6 +152,14 @@ def position_error(y_hat, y, target_time):
     # Compute the discounted position error
     return torch.sum((torch.norm(y_hat[:, :, 0:3] - y[:, :, 0:3], dim=2) ** 2) * exp_decay)
 
+def position_error_payload(y_hat, y, target_time):
+    
+    # Compute the exponential decay
+    exp_decay = 10 * torch.exp(-0.1*torch.arange(0, target_time, 1)).to("cuda")
+    
+    # Compute the discounted position error
+    return torch.sum((torch.norm(y_hat[:, :, 10:13] - y[:, :, 10:13], dim=2) ** 2) * exp_decay)
+
 def velocity_error(y_hat, y, target_time):
 
     # Compute the exponential decay
@@ -183,10 +191,10 @@ def physics_error(y_hat, x, y, target_time, physics_model):
     physics_pred = torch.zeros(x.shape[0], target_time, 10).to("cuda")
 
     # Compute the first prediction of the physical model
-    #physics_pred[:, 0, :] = physics_model.run(x=x[:, -1, 0:10].unsqueeze(1), u=x[:,-1, 13:17].unsqueeze(1))
+    physics_pred[:, 0, :] = physics_model.run(x=x[:, -1, 0:10].unsqueeze(1), u=x[:,-1, 13:17].unsqueeze(1)).squeeze(1)
 
     # Compute the rest of the predictions of the physical model
-    physics_pred[:,1:,:] = physics_model.run(x=y[..., 0:10], u=y[..., 13:17])
+    physics_pred[:, 1:target_time, :] = physics_model.run(x=y[:, 0:target_time-1, 0:10], u=y[:, 0:target_time-1, 13:17])
 
     # Compute the error between the predicted and the physical model
     pos_error = position_error(y_hat, physics_pred, target_time)
@@ -209,13 +217,14 @@ def output_continuity(y_hat):
 
 def compute_loss(y_hat, y, x, target_time, physics_model):
 
-    return position_error(y_hat, y, target_time) + \
-        velocity_error(y_hat, y, target_time) + \
-        100 * continuity_last_input_first_output(y_hat, x) + \
-        output_continuity(y_hat) + \
-        100 * quaternion_norm(y_hat) + \
-        quaternion_error(y_hat, y, target_time) + \
-        physics_error(y_hat, x, y, target_time, physics_model)
+    return 3 * position_error(y_hat, y, target_time) + \
+        1 * velocity_error(y_hat, y, target_time) + \
+        2 * position_error_payload(y_hat, y, target_time) + \
+        2 * continuity_last_input_first_output(y_hat, x) + \
+        1 * output_continuity(y_hat) + \
+        2 * quaternion_norm(y_hat) + \
+        1 * quaternion_error(y_hat, y, target_time) + \
+        5 * physics_error(y_hat, x, y, target_time, physics_model)
     
 
 if __name__ == "__main__":
