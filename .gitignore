@@ -44,3 +44,5 @@ log/
 
 # numpy data
 *.npz
+
+output*/
