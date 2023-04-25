@@ -6,11 +6,9 @@ from torch.optim import AdamW
 from data_loaders.mocap_swipe_loader import MocapSwipeLoader
 from torch.utils.data import DataLoader
 from tqdm import tqdm
-
 import matplotlib.pyplot as plt
 
 from utils.fix_seed import fix_seed
-
 from dynamics.utils import quaternion_multiply, quaternion_invert
 from dynamics.discrete_multirotor import DiscreteMultirotor
 
@@ -37,11 +35,13 @@ class SuperModelo(nn.Module):
 
         self.linear_out = nn.Linear(300, 200)
         self.linear_out2 = nn.Linear(200, 100)
-        self.linear_out3 = nn.Linear(100, 17)
 
-    def forward(self, x, target_time):
+        # We only want to output the position, velocity, quaternion and payload position for the next time step
+        self.linear_out3 = nn.Linear(100, 13)
 
-        outputs = torch.zeros(x.shape[0], target_time, x.shape[2]).to("cuda")
+    def forward(self, x, u, target_time):
+
+        outputs = torch.zeros(x.shape[0], target_time, 13).to("cuda")
 
         x = F.relu(self.input_linear(x))
         x = F.relu(self.input_linear2(x))
@@ -52,7 +52,6 @@ class SuperModelo(nn.Module):
         lstm_out = self.linear(lstm_out[:, -1, :])
         lstm_out = lstm_out[:,None,:]
 
-
         # Save the output of the first sequence
         output = F.relu(self.linear_out(lstm_out))
         output = F.relu(self.linear_out2(output))
@@ -61,16 +60,22 @@ class SuperModelo(nn.Module):
 
         # Predict the next sequence recursively
         for i in range(1, target_time):
+            
+            # Feed to the input of the network, the previous predicted state and the current input
+            x = torch.cat((outputs[:,i-1,:], u[:,i-1,:]), dim=-1).unsqueeze(1)
+            x = F.relu(self.input_linear(x))
+            x = F.relu(self.input_linear2(x))
+            x = F.relu(self.input_linear3(x))
 
-            lstm_out, hidden = self.lstm(lstm_out, hidden)
-            lstm_out = self.linear(lstm_out[:,-1,:])
+            # Pass the latent variables through the lstm
+            lstm_out, hidden = self.lstm(x, hidden)
+            lstm_out = self.linear(lstm_out)
 
             # Save the ouput of the current sequence
             output = F.relu(self.linear_out(lstm_out))
             output = F.relu(self.linear_out2(output))
             output = self.linear_out3(output)
-            outputs[:,i,:] = output
-            lstm_out = lstm_out[:,None,:]
+            outputs[:,i,:] = output[:,-1,:]
 
         return outputs
 
@@ -80,7 +85,7 @@ optimizer = AdamW(model.parameters(), lr=1E-4, weight_decay=0.05)
 Ts = 0.03
 physics_model = DiscreteMultirotor(Ts, 1.0, "cuda")
 
-writer = SummaryWriter(log_dir="output5")
+writer = SummaryWriter(log_dir="output6")
 
 target_time = 25
 
@@ -109,7 +114,7 @@ validation_loader = DataLoader(
 epochs = torch.arange(0, 600, 1)
 
 
-def save_model(epoch, train_loss, val_loss, save_dir="output5/"):
+def save_model(epoch, train_loss, val_loss, save_dir="output6/"):
 
     checkpoint_path = os.path.join(save_dir, 'checkpoint_{:04d}.pth.tar'.format(epoch))
     print('Saving checkpoint {}'.format(checkpoint_path))
@@ -123,7 +128,7 @@ def save_model(epoch, train_loss, val_loss, save_dir="output5/"):
         "optimizer": optimizer.state_dict()
     }, checkpoint_path)
 
-def save_best_model_idx(epoch, val_loss, save_dir="output5/"):
+def save_best_model_idx(epoch, val_loss, save_dir="output6/"):
 
     checkpoint_path = os.path.join(save_dir, 'best_model_idx.pth.tar')
     print('Saving checkpoint {}'.format(checkpoint_path))
@@ -131,7 +136,7 @@ def save_best_model_idx(epoch, val_loss, save_dir="output5/"):
     # Save the current model
     torch.save({"best_model_idx": best_model_idx, "best_val_loss": best_val_loss,}, checkpoint_path)
 
-def load_best_model(epoch, save_dir="output5/"):
+def load_best_model(epoch, save_dir="output6/"):
     
     checkpoint_path = os.path.join(save_dir, 'checkpoint_{:04d}.pth.tar'.format(epoch))
     print("Loading: {}".format(checkpoint_path))
@@ -205,7 +210,7 @@ def physics_error(y_hat, x, y, target_time, physics_model):
 
 
 def continuity_last_input_first_output(y_hat, x):
-    return torch.sum(torch.norm(y_hat[:, 0, :] - x[:, -1, :], dim=1) **2, dim=0)
+    return torch.sum(torch.norm(y_hat[:, 0, :] - x[:, -1, 0:13], dim=1) **2, dim=0)
 
 def output_continuity(y_hat):
 
@@ -255,8 +260,11 @@ if __name__ == "__main__":
                 # Get the input of the network and the expect output from the batch
                 x, y = batch
 
+                # Generate the u from the y vector
+                u = y[:, :, 13:17]
+
                 # Perform a forward pass
-                y_hat = model(x, target_time)
+                y_hat = model(x, u, target_time)
 
                 # --------------------------------------
                 # LOSS
@@ -278,9 +286,12 @@ if __name__ == "__main__":
         with torch.no_grad():
 
             for x, y in validation_loader:
+
+                # Generate the u from the y vector
+                u = y[..., 13:17]
                 
                 # Perform a forward pass
-                y_hat = model(x, target_time)
+                y_hat = model(x, u, target_time)
 
                 total_val_loss = compute_loss(y_hat, y, x, target_time, physics_model)
 
