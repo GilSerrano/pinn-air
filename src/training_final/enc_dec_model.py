@@ -82,8 +82,11 @@ class AlphaModel(nn.Module):
         self.linear_out2 = nn.Linear(200, 100)
         self.linear_out3 = nn.Linear(100, output_dim)
 
-    def forward(self, x, u,  target_time, target_y=None, teacher_forcing_ratio=0.0):
+    def forward(self, x, u, target_y=None, teacher_forcing_ratio=0.0):
         
+        # Get the target time from the size of the control inputs
+        target_time = u.shape[1]
+
         # Create a tensor to store the outputs of shape (batch_size, target_time, num_states)
         outputs = torch.zeros(x.shape[0], target_time, 13).to(self.device)
 
@@ -127,7 +130,9 @@ class AlphaModel(nn.Module):
 
         return outputs
     
-    def predict(self, x, u, )
+    def predict(self, x, u, ):
+
+        self.forward(x, u, )
 
     def compute_loss(self, y_hat, y, x, target_time, physics_model):
 

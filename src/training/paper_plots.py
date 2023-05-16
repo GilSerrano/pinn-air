@@ -60,8 +60,8 @@ fig = plt.figure(figsize=(4, 2), dpi=300)
 # Plot the resulting prediction
 x_last, y_last, z_last = x[-1, 3] * torch.ones(1), x[-1, 4] * torch.ones(1), x[-1, 5] * torch.ones(1)
 plt.plot(time2, torch.cat((x_last, y_hat[0, :, 3]), dim=0).numpy(force=True), linestyle="--", color="red", label="$v_x$")        # x
-plt.plot(time2, torch.cat((y_last, y_hat[0, :, 4]), dim=0).numpy(force=True), linestyle="--", color="green", label="$v_x$")        # y
-plt.plot(time2, torch.cat((z_last, y_hat[0, :, 5]), dim=0).numpy(force=True), linestyle="--", color="blue", label="$v_x$")        # z
+plt.plot(time2, torch.cat((y_last, y_hat[0, :, 4]), dim=0).numpy(force=True), linestyle="--", color="green", label="$v_y$")        # y
+plt.plot(time2, torch.cat((z_last, y_hat[0, :, 5]), dim=0).numpy(force=True), linestyle="--", color="blue", label="$v_z$")        # z
 
 # Plot the real position
 plt.plot(time, torch.cat((x[:, 3], y[:, 3]), dim=0).numpy(force=True), color=(1,0,0,0.6))        # x
@@ -107,9 +107,9 @@ plt.savefig("quaternion.pdf")
 fig = plt.figure(figsize=(4, 2), dpi=300)
 # Plot the resulting prediction of the load
 x_last, y_last, z_last = x[-1, 10] * torch.ones(1), x[-1, 11] * torch.ones(1), x[-1, 12] * torch.ones(1)
-plt.plot(time2, torch.cat((x_last, y_hat[0, :, 10]), dim=0).numpy(force=True), linestyle="--", color="red", label="$p^L_x$")        # x
+plt.plot(time2, torch.cat((x_last, y_hat[0, :, 10]), dim=0).numpy(force=True), linestyle="--", color="red", label="$p^L_x$")          # x
 plt.plot(time2, torch.cat((y_last, y_hat[0, :, 11]), dim=0).numpy(force=True), linestyle="--", color="green", label="$p^L_y$")        # y
-plt.plot(time2, torch.cat((z_last, y_hat[0, :, 12]), dim=0).numpy(force=True), linestyle="--", color="blue", label="$p^L_z$")        # z
+plt.plot(time2, torch.cat((z_last, y_hat[0, :, 12]), dim=0).numpy(force=True), linestyle="--", color="blue", label="$p^L_z$")         # z
 
 # Plot the real position
 plt.plot(time, torch.cat((x[:, 10], y[:, 10]), dim=0).numpy(force=True), color=(1,0,0,0.6))        # x
