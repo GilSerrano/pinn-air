@@ -1,0 +1,10 @@
+slow_ellipses_xy_02.npz
+fast_8_lap_plane_01.npz
+xy_step_02.npz
+xyz_step_10.npz
+baf_slow_00.npz
+slow_ellipses_xyz_01.npz
+fast_ellipses_xyz_01.npz
+roll_35_00.npz
+xyz_step_09.npz
+fast_ellipses_xy_02.npz
