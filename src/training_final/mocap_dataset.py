@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import torch
+import random
 import numpy as np
 import codecs as cs
 from tqdm import tqdm
@@ -124,7 +125,7 @@ class MocapDatasetLoader(data.Dataset):
         # Get the total number of sequences in the dataset
         self.num_sequences = len(self.x)
 
-        self.rotating_seed = 0
+        self.rotating_seed = random.randint(0, 1000)
 
     def window_squence(self, timeseries, input_window, output_window, stride):
         # ------------------------------------------------------------------------------
