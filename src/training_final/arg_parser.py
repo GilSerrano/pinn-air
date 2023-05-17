@@ -14,8 +14,8 @@ class ArgsParser:
         train_group.add_argument("--learning_rate", default=1E-4, type=float, help="Learning rate.")
         train_group.add_argument("--weight_decay", default=0.05, type=float, help="Weight decay.")
         train_group.add_argument("--num_epochs", default=600, type=int, help="Number of epochs.")
-        train_group.add_argument("--teacher_forcing_ratio", default=0.0, type=float, help="Teacher forcing ratio.")
-        train_group.add_argument("--teacher_forcing_decay", default=0.0, type=float, help="Teacher forcing decay.")
+        train_group.add_argument("--teacher_forcing_ratio", default=1.0, type=float, help="Teacher forcing ratio.")
+        train_group.add_argument("--teacher_forcing_decay", default=2.0, type=float, help="Teacher forcing decay.")
 
         # Options for the model
         model_group = self.parser.add_argument_group('model')

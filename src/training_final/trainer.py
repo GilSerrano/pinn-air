@@ -3,6 +3,7 @@ import os
 import torch
 from tqdm import tqdm
 import matplotlib.pyplot as plt
+from math import exp
 from torch.utils.tensorboard import SummaryWriter
 
 class Trainer:
@@ -153,7 +154,7 @@ class Trainer:
             target_time = y.shape[1]
 
             # Compute the teacher forcing ratio, using an exponential decay
-            tf_ratio = self.teacher_forcing_decay * torch.exp(-epoch * self.teacher_forcing_decay)
+            tf_ratio = self.teacher_forcing_ratio * exp(-epoch * self.teacher_forcing_decay)
 
             # Get the output sequence from the model
             y_hat = self.model(x, u, target_y=y, teacher_forcing_ratio=tf_ratio)
