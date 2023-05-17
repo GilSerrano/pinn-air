@@ -48,6 +48,9 @@ def main():
     input_window = 50      # seconds
     output_window = 25     # seconds
 
+    # Set the data augmentation flag
+    data_augmentation = True
+
     # Create the physics model
     vehicle_model = DiscreteMultirotor(Ts, mass, device)
 
@@ -63,8 +66,8 @@ def main():
     # ---------------------------------
     # Load the datasets for training
     # ---------------------------------
-    train_dataset = MocapDatasetLoader(input_window=input_window, output_window=output_window, stride=1, split="train", device="cuda")
-    validation_dataset = MocapDatasetLoader(input_window=input_window, output_window=output_window, stride=1, split="val", device="cuda")
+    train_dataset = MocapDatasetLoader(input_window=input_window, output_window=output_window, stride=1, split="train", device="cuda", data_augmentation=data_augmentation)
+    validation_dataset = MocapDatasetLoader(input_window=input_window, output_window=output_window, stride=1, split="val", device="cuda", data_augmentation=False)
 
     train_loader = DataLoader(
                train_dataset,                                           # The dataset itself

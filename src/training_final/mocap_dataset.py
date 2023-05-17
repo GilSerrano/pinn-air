@@ -12,7 +12,7 @@ class MocapDatasetLoader(data.Dataset):
     Class used to load the data from the mocap datasets
     """
 
-    def __init__(self, input_window, output_window, stride, dataset_path='', split="test", device="cpu"):
+    def __init__(self, input_window, output_window, stride, dataset_path='', split="test", device="cpu", data_augmentation = False):
         """
         Initialize the dataset loader.
 
@@ -37,6 +37,9 @@ class MocapDatasetLoader(data.Dataset):
 
         # Define the device where the data will be stored
         self.device = device
+
+        # Define the data augmentation flag
+        self.data_augmentation = data_augmentation
 
         # List of the files to use for this dataset
         name_list = []
@@ -108,7 +111,8 @@ class MocapDatasetLoader(data.Dataset):
             
             # Generate the windows
             x, y = self.window_squence(series, self.input_window, self.output_window, self.stride)
-            
+
+           
             # Save the mini-batches of the sequence
             self.x.append(x)
             self.y.append(y)
@@ -179,8 +183,44 @@ class MocapDatasetLoader(data.Dataset):
         
         """
         # Convert back the list of tensors to a single tensor
-        return self.x[index], self.y[index]
+
+        return self.x[index], self.y[index] if self.data_augmentation is False else self.data_augment(self.x[index], self.y[index])
     
+    def data_augment(self, x, y):
+        """Apply data augmentation to the input and target tensors.
+            For now, we only consider the following data augmentation techniques:
+            - Random translation
+            - Random noise
+        Args:
+            x (nn.Tensor): The input tensor.
+            y (nn.Tensor): The target tensor.
+        Returns:
+            tuple(nn.Tensor): A tupple containing the data for the given index (input, target)
+        """
+        # Get the shape of the input tensor
+        shape = x.shape
+
+        # set up new rng without fixed seed 
+        rng = np.random.default_rng()
+
+        # Get translation random vector
+        low = -0.1
+        high = 0.1
+        translation = torch.from_numpy(rng.uniform(low=low, high=high, size=3)).to(self.device)
+
+        # Apply random translation
+        x[:,:3] += translation
+        y[:,:3] += translation
+
+        # Get random noise
+        noise = torch.from_numpy(rng.normal(loc=0.0, scale=0.01, size=shape)).to(self.device)
+
+        # Apply random noise
+        # y is the target, so we don't want to add noise to it
+        x = x + noise
+
+        return x, y
+
     @staticmethod
     def collate(batch, device):
 
@@ -197,8 +237,10 @@ class MocapDatasetLoader(data.Dataset):
         
 
 if __name__ == "__main__":
+    input_window = 50      # seconds
+    output_window = 25     # seconds
 
-    dataset = MocapDatasetLoader(device="cpu")
+    dataset = MocapDatasetLoader(device="cpu", input_window=input_window, output_window=output_window, stride = 1, data_augmentation=True)
     
     print(len(dataset))
 
