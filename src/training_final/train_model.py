@@ -6,6 +6,7 @@ import numpy as np
 # Import our custom libraries here
 from trainer import Trainer
 from model import SuperModelo
+from enc_dec_model import AlphaModel
 from arg_parser import ArgsParser
 from vehicle_model import DiscreteMultirotor
 
@@ -51,7 +52,7 @@ def main():
     vehicle_model = DiscreteMultirotor(Ts, mass, device)
 
     # Create the network model
-    model = SuperModelo()
+    model = AlphaModel(output_dim=13, num_layers=3, dropout=0.2, device=device)
 
     # Create the optimizer
     optimizer = torch.optim.Adam(model.parameters(), lr=parser.args.learning_rate, weight_decay=parser.args.weight_decay)
@@ -97,6 +98,7 @@ def main():
         criterion=criterion, 
         output_dir=parser.args.output_path, 
         teacher_forcing_ratio=parser.args.teacher_forcing_ratio, 
+        teacher_forcing_decay=parser.args.teacher_forcing_decay,
         device=device
     )
 

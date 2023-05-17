@@ -7,7 +7,7 @@ from torch.utils.tensorboard import SummaryWriter
 
 class Trainer:
 
-    def __init__(self, model, physics_model, train_dataloader, eval_dataloader, optimizer, criterion, output_dir, teacher_forcing_ratio, device):
+    def __init__(self, model, physics_model, train_dataloader, eval_dataloader, optimizer, criterion, output_dir, teacher_forcing_ratio, teacher_forcing_decay, device):
         """
         Implement this function to train the model for one epoch.
 
@@ -18,6 +18,7 @@ class Trainer:
             loss (nn.Module): loss function
             optimizer (torch.optim): optimizer for the model parameters
             teacher_forcing_ratio (float): probability of using teacher forcing
+            teacher_forcing_decay (float): decay of the teacher forcing ratio
             device (torch.device): device to use for training
         """
         
@@ -33,6 +34,7 @@ class Trainer:
         self.optimizer = optimizer
         self.criterion = criterion
         self.teacher_forcing_ratio = teacher_forcing_ratio
+        self.teacher_forcing_decay = teacher_forcing_decay
 
         # Store the device where we want to run the model
         self.device = device
@@ -66,7 +68,7 @@ class Trainer:
                 target_batch = target_batch.to(self.device)
 
                 # Train the model and save the loss value
-                train_losses.append(self.train_batch(input_batch, target_batch))
+                train_losses.append(self.train_batch(input_batch, target_batch, epoch))
 
             # Compute the mean of the loss up to this point and append to the list
             self.train_epoch_loss.append(torch.tensor(train_losses).mean().item())
@@ -132,7 +134,7 @@ class Trainer:
 
         return torch.tensor(eval_loss).mean().item()
 
-    def train_batch(self, input_batch, target_batch, clip=1):
+    def train_batch(self, input_batch, target_batch, epoch, clip=1):
 
         # Set the model to train mode
         self.model.train()
@@ -150,8 +152,11 @@ class Trainer:
             # Get the target time from the target sequence
             target_time = y.shape[1]
 
+            # Compute the teacher forcing ratio, using an exponential decay
+            tf_ratio = self.teacher_forcing_decay * torch.exp(-epoch * self.teacher_forcing_decay)
+
             # Get the output sequence from the model
-            y_hat = self.model(x, u, target_time=target_time)
+            y_hat = self.model(x, u, target_y=y, teacher_forcing_ratio=tf_ratio)
 
             # Compute the loss
             loss = self.criterion(y_hat, y, x, target_time, self.physics_model)

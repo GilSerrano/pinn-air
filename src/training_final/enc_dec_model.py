@@ -25,7 +25,7 @@ class Encoder(nn.Module):
         self.dropout = dropout if num_layers > 1 else 0
 
         # Setup the LSTM layer
-        self.encoder = nn.LSTM(17, input_dim, num_layers=num_layers, bidirectional=bidirectional, dropout=dropout, batch_first=True)
+        self.encoder = nn.LSTM(input_dim, hidden_dim, num_layers=num_layers, bidirectional=bidirectional, dropout=dropout, batch_first=True)
 
     def forward(self, x):
             
@@ -56,13 +56,18 @@ class Decoder(nn.Module):
         self.linear_out = nn.Linear(hidden_dim, output_dim)
 
     def forward(self, x, decoder_hidden):
+        
         decoder_out, decoder_hidden = self.decoder(x, decoder_hidden)
-        return decoder_out, decoder_hidden
+
+        # Get the prediction
+        prediction = self.linear_out(decoder_out)
+
+        return prediction, decoder_hidden
     
 
 class AlphaModel(nn.Module):
 
-    def __init__(self, output_dim, hidden_dim, num_layers, dropout, device):
+    def __init__(self, output_dim, num_layers, dropout, device):
 
         super(AlphaModel, self).__init__()
 
@@ -91,48 +96,55 @@ class AlphaModel(nn.Module):
         outputs = torch.zeros(x.shape[0], target_time, 13).to(self.device)
 
         # Pass the input through the linear layers
-        x = F.relu(self.input_linear(x))
-        x = F.relu(self.input_linear2(x))
-        x = F.relu(self.input_linear3(x))
+        z = x
+        z = F.dropout(F.relu(self.input_linear(z)), training=self.training, p=self.dropout)
+        z = F.dropout(F.relu(self.input_linear2(z)), training=self.training, p=self.dropout)
+        z = F.dropout(F.relu(self.input_linear3(z)), training=self.training, p=self.dropout)
 
         # Pass the previous sequence through the lstm
-        _, hidden = self.encoder(x)
+        _, hidden = self.encoder(z)
 
         # Get the first input of the decoder, which is the last state [x, u]
         decoder_input = x[:,-1,:].unsqueeze(1)
 
         # Predict the next sequence recursively
-        for t in range(1, target_time):
+        for t in range(0, target_time):
 
             # Feed the decoder input thorugh the input linear layers
-            decoder_input = F.relu(self.input_linear(decoder_input))
-            decoder_input = F.relu(self.input_linear2(decoder_input))
-            decoder_input = F.relu(self.input_linear3(decoder_input))
+            decoder_input = F.dropout(F.relu(self.input_linear(decoder_input)), training=self.training, p=self.dropout)
+            decoder_input = F.dropout(F.relu(self.input_linear2(decoder_input)), training=self.training, p=self.dropout)
+            decoder_input = F.dropout(F.relu(self.input_linear3(decoder_input)), training=self.training, p=self.dropout)
             
             # Feed to the input of the network, the previous predicted state and the current input
             decoder_out, hidden = self.decoder(decoder_input, hidden)
+
             decoder_out = self.linear_out(decoder_out)
             decoder_out = self.linear_out2(decoder_out)
             decoder_out = self.linear_out3(decoder_out)
 
-            # Save the output of the first sequence
-            # TODO: check the output dimension of the decoder
+            # Save the output of the decoder
             outputs[:,t,:] = decoder_out[:,-1,:]
 
             # Decide if we are going to use teacher forcing or not in the next iteration
             teacher_force = True if random.random() < teacher_forcing_ratio else False
 
             # Use the teacher forcing or not
-            decoder_input = target_y[:,t,:].unsqueeze(1) if teacher_force and target_y is not None else torch.cat((decoder_out[:,-1,:], u[:,t,:]), dim=1).unsqueeze(1)
-
-            # Get the next input of the decoder
-            decoder_input = decoder_out[:,None,:]
+            decoder_input = target_y[:,t,:].unsqueeze(1) if teacher_force and target_y is not None else torch.cat((decoder_out[:,-1,:], u[:,t,:]), dim=-1).unsqueeze(1)
 
         return outputs
     
-    def predict(self, x, u, ):
+    def predict(self, x, u):
+        """Given the N timesteps of the state and inputs of the system X and the next U input of the system (for the next N timesteps),
+        predict the next N states of the system.
 
-        self.forward(x, u, )
+        Args:
+            x (torch.Tensor): A tensor with the previous M state + input of the system of shape (batch_size, M, 17)
+            u (torch.Tensor): A tensor with the next input of the system for the next N timesteps of shape (batch_size, N, 4)
+
+        Returns:
+            torch.Tensor: A tensor with the next N states of the system of shape (batch_size, N, 13)
+        """
+        return self.forward(x, u, target_y=None, teacher_forcing_ratio=0.0)
 
     def compute_loss(self, y_hat, y, x, target_time, physics_model):
 
