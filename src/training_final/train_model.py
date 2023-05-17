@@ -40,6 +40,16 @@ def main():
     # Fix the seed for reproducibility
     fix_seed(parser.args.seed)
 
+    # Print the arguments used during training
+    print("Seed: {}".format(parser.args.seed))
+    print("Batch size: {}".format(parser.args.batch_size))
+    print("Learning rate: {}".format(parser.args.learning_rate))
+    print("Weight decay: {}".format(parser.args.weight_decay))
+    print("Number of epochs: {}".format(parser.args.num_epochs))
+    print("Teacher forcing ratio: {}".format(parser.args.teacher_forcing_ratio))
+    print("Teacher forcing decay: {}".format(parser.args.teacher_forcing_decay))
+    print("Data augmentation: {}".format(parser.args.data_augmentation))
+
     # Set the sampling rate and the mass of the vehicle
     Ts = 0.03       # seconds
     mass = 1.0      # kilograms
@@ -47,9 +57,6 @@ def main():
     # Set the time windows for the input/output data
     input_window = 50      # seconds
     output_window = 25     # seconds
-
-    # Set the data augmentation flag
-    data_augmentation = True
 
     # Create the physics model
     vehicle_model = DiscreteMultirotor(Ts, mass, device)
@@ -66,7 +73,7 @@ def main():
     # ---------------------------------
     # Load the datasets for training
     # ---------------------------------
-    train_dataset = MocapDatasetLoader(input_window=input_window, output_window=output_window, stride=1, split="train", device="cuda", data_augmentation=data_augmentation)
+    train_dataset = MocapDatasetLoader(input_window=input_window, output_window=output_window, stride=1, split="train", device="cuda", data_augmentation=parser.args.data_augmentation, augmentation_low=parser.args.augmentation_low, augmentation_high=parser.args.augmentation_high)
     validation_dataset = MocapDatasetLoader(input_window=input_window, output_window=output_window, stride=1, split="val", device="cuda", data_augmentation=False)
 
     train_loader = DataLoader(

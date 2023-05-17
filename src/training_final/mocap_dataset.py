@@ -12,7 +12,7 @@ class MocapDatasetLoader(data.Dataset):
     Class used to load the data from the mocap datasets
     """
 
-    def __init__(self, input_window, output_window, stride, dataset_path='', split="test", device="cpu", data_augmentation = False):
+    def __init__(self, input_window, output_window, stride, dataset_path='', split="test", device="cpu", data_augmentation = False, augmentation_high=10.0, augmentation_low=-10.0):
         """
         Initialize the dataset loader.
 
@@ -40,6 +40,8 @@ class MocapDatasetLoader(data.Dataset):
 
         # Define the data augmentation flag
         self.data_augmentation = data_augmentation
+        self.augmentation_high = augmentation_high
+        self.augmentation_low = augmentation_low
 
         # List of the files to use for this dataset
         name_list = []
@@ -111,7 +113,6 @@ class MocapDatasetLoader(data.Dataset):
             
             # Generate the windows
             x, y = self.window_squence(series, self.input_window, self.output_window, self.stride)
-
            
             # Save the mini-batches of the sequence
             self.x.append(x)
@@ -123,12 +124,13 @@ class MocapDatasetLoader(data.Dataset):
         # Get the total number of sequences in the dataset
         self.num_sequences = len(self.x)
 
+        self.rotating_seed = 0
+
     def window_squence(self, timeseries, input_window, output_window, stride):
         # ------------------------------------------------------------------------------
         # We must break the sequences into windows:
         # x (time_len, 17) input of the network up until timestep T
-        # y (prediction_len, 13) expected prediction from T+1 until T+prediction_len
-        # u (prediction_len, 4) the inputs of the system from T+1 until T+prediction_len
+        # y (prediction_len, 17) expected prediction from T+1 until T+prediction_len
         # ------------------------------------------------------------------------------
         
         # Get the total length of the sequence
@@ -184,7 +186,7 @@ class MocapDatasetLoader(data.Dataset):
         """
         # Convert back the list of tensors to a single tensor
 
-        return self.x[index], self.y[index] if self.data_augmentation is False else self.data_augment(self.x[index], self.y[index])
+        return self.x[index], self.y[index] if not self.data_augmentation else self.data_augment(self.x[index], self.y[index])
     
     def data_augment(self, x, y):
         """Apply data augmentation to the input and target tensors.
@@ -197,27 +199,29 @@ class MocapDatasetLoader(data.Dataset):
         Returns:
             tuple(nn.Tensor): A tupple containing the data for the given index (input, target)
         """
-        # Get the shape of the input tensor
-        shape = x.shape
 
         # set up new rng without fixed seed 
-        rng = np.random.default_rng()
+        rng = np.random.default_rng(self.rotating_seed)
+        self.rotating_seed += 1
 
         # Get translation random vector
-        low = -0.1
-        high = 0.1
-        translation = torch.from_numpy(rng.uniform(low=low, high=high, size=3)).to(self.device)
+        translation = torch.from_numpy(rng.uniform(low=self.augmentation_low, high=self.augmentation_high, size=3)).to(self.device)
 
-        # Apply random translation
-        x[:,:3] += translation
-        y[:,:3] += translation
+        print(translation)
 
-        # Get random noise
-        noise = torch.from_numpy(rng.normal(loc=0.0, scale=0.01, size=shape)).to(self.device)
+        # Content of the input tensor:
+        # x[k] = [p[k], v[k], R[k], p_load[k], w_ref[k], T_ref[k]]
 
-        # Apply random noise
-        # y is the target, so we don't want to add noise to it
-        x = x + noise
+        # Content of the target tensor:
+        # y[k] = [p[k+1], v[k+1], R[k+1], p_load[k+1], w_ref[k], T_ref[k]]
+        #         0,1,2  ,3,4,5, 6,7,8,9, 10,11,12    13,14,15,16
+        
+        # Apply the translation to both the position of the vehicle and the position of the load
+        x[...,0:3] += translation
+        x[...,10:13] += translation
+
+        y[...,0:3] += translation
+        y[...,10:13] += translation
 
         return x, y
 

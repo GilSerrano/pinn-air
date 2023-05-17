@@ -17,6 +17,12 @@ class ArgsParser:
         train_group.add_argument("--teacher_forcing_ratio", default=1.0, type=float, help="Teacher forcing ratio.")
         train_group.add_argument("--teacher_forcing_decay", default=2.0, type=float, help="Teacher forcing decay.")
 
+        # Data augmentation, default is to use data augmentation
+        train_group.add_argument("--data_augmentation", dest='data_augmentation', action='store_false', help="Use data augmentation.")
+        self.parser.set_defaults(data_augmentation=True)
+        train_group.add_argument("--augmentation_low", default=-10.0, type=float, help="Lower bound for the augmentation.")
+        train_group.add_argument("--augmentation_high", default=10.0, type=float, help="Upper bound for the augmentation.")
+
         # Options for the model
         model_group = self.parser.add_argument_group('model')
         model_group.add_argument("--hidden_dim", default=512, type=int, help="Dimension of the hidden state.")
