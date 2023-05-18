@@ -118,8 +118,8 @@ class AlphaModel(nn.Module):
             # Feed to the input of the network, the previous predicted state and the current input
             decoder_out, hidden = self.decoder(decoder_input, hidden)
 
-            decoder_out = self.linear_out(decoder_out)
-            decoder_out = self.linear_out2(decoder_out)
+            decoder_out = F.dropout(F.relu(self.linear_out(decoder_out)), training=self.training, p=self.dropout)
+            decoder_out = F.dropout(F.relu(self.linear_out2(decoder_out)), training=self.training, p=self.dropout)
             decoder_out = self.linear_out3(decoder_out)
 
             # Save the output of the decoder

@@ -8,9 +8,11 @@ from loss import position_error, velocity_error, position_error_payload, continu
 
 class SuperModelo(nn.Module):
 
-    def __init__(self):
+    def __init__(self, device):
 
         super(SuperModelo, self).__init__()
+
+        self.device = device
 
         # NOTA: adicionar relus no input? no output nao, porque podemos ter valores negativos no output
         
@@ -28,7 +30,14 @@ class SuperModelo(nn.Module):
         # We only want to output the position, velocity, quaternion and payload position for the next time step
         self.linear_out3 = nn.Linear(100, 13)
 
-    def forward(self, x, u, target_time):
+    def forward(self, x, u, target_y=None, teacher_forcing_ratio=0.0):
+
+        # UNUSED IN THIS MODEL
+        target_y = None
+        teacher_forcing_ratio = 0.0
+
+        # Get the target time
+        target_time = u.shape[1]
 
         outputs = torch.zeros(x.shape[0], target_time, 13).to("cuda")
 

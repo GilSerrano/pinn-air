@@ -14,12 +14,12 @@ class ArgsParser:
         train_group.add_argument("--learning_rate", default=1E-4, type=float, help="Learning rate.")
         train_group.add_argument("--weight_decay", default=0.05, type=float, help="Weight decay.")
         train_group.add_argument("--num_epochs", default=600, type=int, help="Number of epochs.")
-        train_group.add_argument("--teacher_forcing_ratio", default=1.0, type=float, help="Teacher forcing ratio.")
+        train_group.add_argument("--teacher_forcing_ratio", default=0.0, type=float, help="Teacher forcing ratio.")
         train_group.add_argument("--teacher_forcing_decay", default=2.0, type=float, help="Teacher forcing decay.")
 
         # Data augmentation, default is to use data augmentation
         train_group.add_argument("--data_augmentation", dest='data_augmentation', action='store_false', help="Use data augmentation.")
-        self.parser.set_defaults(data_augmentation=True)
+        self.parser.set_defaults(data_augmentation=False)
         train_group.add_argument("--augmentation_low", default=-10.0, type=float, help="Lower bound for the augmentation.")
         train_group.add_argument("--augmentation_high", default=10.0, type=float, help="Upper bound for the augmentation.")
 
