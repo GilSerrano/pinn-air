@@ -97,6 +97,8 @@ class Trainer:
             # Save the validation losses over time
             self.val_epoch_loss.append(eval_loss)
 
+            print(f"Epoch {epoch+1}/{num_epochs} - Train loss: {self.train_epoch_loss[-1]} - Validation loss: {self.val_epoch_loss[-1]}")
+
         # Load the best model parameters
         checkpoint = torch.load(os.path.join(self.output_dir, f"epoch_{self.best_epoch}_best_model.pt"))
         self.model.load_state_dict(checkpoint['model'])
@@ -166,7 +168,7 @@ class Trainer:
             loss.backward()
 
             # Clip the gradients to avoid exploding gradients
-            torch.nn.utils.clip_grad_norm_(self.model.parameters(), clip)
+            #torch.nn.utils.clip_grad_norm_(self.model.parameters(), clip)
 
             self.optimizer.step()
 
