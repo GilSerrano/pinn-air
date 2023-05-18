@@ -4,13 +4,14 @@
     // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
     "version": "0.2.0",
     "configurations": [
+
         {
-            "name": "Train RNN",
+            "name": "Train Alpha Model",
             "type": "python",
             "request": "launch",
-            "cwd": "${workspaceFolder}/src/training",
-            "program": "1_train_rnn_real_with_payload.py",
-            "args": ["--save_dir", "output"],
+            "cwd": "${workspaceFolder}/src/training_final",
+            "program": "train_model.py",
+            "args": ["--output_path", "output"],
             "console": "integratedTerminal",
             "justMyCode": true
         }

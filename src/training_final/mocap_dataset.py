@@ -185,46 +185,27 @@ class MocapDatasetLoader(data.Dataset):
             u[k] = [w_ref[k+1], T_ref[k+1]
         
         """
-        # Convert back the list of tensors to a single tensor
 
-        return self.x[index], self.y[index] if not self.data_augmentation else self.data_augment(self.x[index], self.y[index])
-    
-    def data_augment(self, x, y):
-        """Apply data augmentation to the input and target tensors.
-            For now, we only consider the following data augmentation techniques:
-            - Random translation
-            - Random noise
-        Args:
-            x (nn.Tensor): The input tensor.
-            y (nn.Tensor): The target tensor.
-        Returns:
-            tuple(nn.Tensor): A tupple containing the data for the given index (input, target)
-        """
-
-        # set up new rng without fixed seed 
-        rng = np.random.default_rng(self.rotating_seed)
-        self.rotating_seed += 1
-
-        # Get translation random vector
-        translation = torch.from_numpy(rng.uniform(low=self.augmentation_low, high=self.augmentation_high, size=3)).to(self.device)
-
-        print(translation)
-
-        # Content of the input tensor:
-        # x[k] = [p[k], v[k], R[k], p_load[k], w_ref[k], T_ref[k]]
-
-        # Content of the target tensor:
-        # y[k] = [p[k+1], v[k+1], R[k+1], p_load[k+1], w_ref[k], T_ref[k]]
-        #         0,1,2  ,3,4,5, 6,7,8,9, 10,11,12    13,14,15,16
+        x = self.x[index]
+        y = self.y[index] 
         
-        # Apply the translation to both the position of the vehicle and the position of the load
-        x[...,0:3] += translation
-        x[...,10:13] += translation
+        if self.data_augmentation:
+            # set up new rng without fixed seed 
+            rng = np.random.default_rng(self.rotating_seed)
+            self.rotating_seed += 1
 
-        y[...,0:3] += translation
-        y[...,10:13] += translation
+            # Get translation random vector
+            translation = torch.from_numpy(rng.uniform(low=self.augmentation_low, high=self.augmentation_high, size=3)).to(self.device)
+
+            # Apply the translation to both the position of the vehicle and the position of the load
+            x[:, 0:3] += translation
+            x[:, 10:13] += translation
+   
+            y[:, 0:3] += translation
+            y[:, 10:13] += translation
 
         return x, y
+        
 
     @staticmethod
     def collate(batch, device):
