@@ -5,6 +5,9 @@ import torch
 import matplotlib.pyplot as plt
 from mocap_dataset import MocapDatasetLoader
 
+from alpha_model import AlphaModel
+from model import SuperModelo
+
 
 def fetch_best_epoch(output_dir="output/", file="best_epoch.txt"):
     """
@@ -23,16 +26,15 @@ def fetch_best_epoch(output_dir="output/", file="best_epoch.txt"):
 
     return best_epoch
 
-def load_best_model(best_epoch, model, optimizer, output_dir="output/"):
+def load_best_model(best_epoch, model, output_dir="output/"):
     
     checkpoint_path = os.path.join(output_dir, f"epoch_{best_epoch}_best_model.pt")
     print("Loading: {}".format(checkpoint_path))
 
     checkpoint = torch.load(checkpoint_path)
     model.load_state_dict(checkpoint['model'])
-    optimizer.load_state_dict(checkpoint['optimizer'])
 
-    return model, optimizer
+    return model
 
 class Plot:
 
@@ -90,21 +92,27 @@ class Plot:
 
 def main():
 
+    # Set the device for performing training
+    device = "cuda" if torch.cuda.is_available() else "cpu"
+    torch.set_default_device(device)
+    print("Using device: {}".format(device))
+
     output_dir = 'output'
     best_epoch = fetch_best_epoch(output_dir)
 
-    # model, _ = load_best_model(best_epoch, model, optimizer, output_dir)
-    model, _ = load_best_model(best_epoch, output_dir=output_dir)
+    model = SuperModelo(device)
+
+    model = load_best_model(best_epoch, model, output_dir=output_dir)
 
     target_time = 25
-    test_dataset = MocapDatasetLoader(input_window=50, output_window=target_time, stride=1, split="test", device="cuda")
+    test_dataset = MocapDatasetLoader(input_window=50, output_window=target_time, stride=1, split="test", device=device)
     
     # sampling time
     Ts = 0.03
 
     x, y = test_dataset[0]
-    x = x.to("cuda")
-    y = y.to("cuda")
+    x = x.to(device)
+    y = y.to(device)
 
     u = y[..., 13:17]
     y_hat = model(x[None, :, :], u[None, :, :], target_time)
