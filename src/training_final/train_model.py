@@ -70,6 +70,17 @@ def main():
     #model = AlphaModel(output_dim=13, num_layers=3, dropout=parser.args.dropout, device=device)
     model = SuperModelo(device)
 
+    # Set the loss parameters
+    model.set_loss_params(
+        parser.args.position_error,
+        parser.args.velocity_error, 
+        parser.args.position_error_payload, 
+        parser.args.continuity_last_input_first_output,
+        parser.args.output_continuity,
+        parser.args.quaternion_norm,
+        parser.args.quaternion_error,
+        parser.args.physics_error)
+
     # Create the optimizer
     optimizer = torch.optim.Adam(model.parameters(), lr=parser.args.learning_rate, weight_decay=parser.args.weight_decay)
 

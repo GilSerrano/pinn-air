@@ -38,4 +38,15 @@ class ArgsParser:
         extras_group.add_argument("--use_attention", dest='use_attention', action='store_true', help="Use attention in the model.")
         self.parser.set_defaults(use_attention=False)
 
+        # Abblation part
+        ablation_group = self.parser.add_argument_group('ablation')
+        ablation_group.add_argument("--position_error", default=3, type=float, help="Position error between real and netowrk.")
+        ablation_group.add_argument("--velocity_error", default=1, type=float, help="Velocity error between real and netowrk.")
+        ablation_group.add_argument("--position_error_payload", default=2, type=float, help="Error between real and netowrk.")
+        ablation_group.add_argument("--continuity_last_input_first_output", default=2, type=float, help="Continuity between last input and first output.")
+        ablation_group.add_argument("--output_continuity", default=1, type=float, help="Continuity between outputs.")
+        ablation_group.add_argument("--quaternion_norm", default=2, type=float, help="Quaternion norm.")
+        ablation_group.add_argument("--quaternion_error", default=1, type=float, help="Quaternion error.")
+        ablation_group.add_argument("--physics_error", default=5, type=float, help="Physics error.")
+
         self.args = self.parser.parse_args()
