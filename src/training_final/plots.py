@@ -27,7 +27,7 @@ def fetch_best_epoch(output_dir="output/", file="best_epoch.txt"):
     return best_epoch
 
 
-def load_best_model(best_epoch, model, output_dir="./output"):
+def load_best_model(best_epoch, model, output_dir="./output", device="cpu"):
     
     print(f"epoch_{best_epoch}_best_model.pt")
 
@@ -37,7 +37,7 @@ def load_best_model(best_epoch, model, output_dir="./output"):
     checkpoint = torch.load(checkpoint_path)
     model.load_state_dict(checkpoint['model'])
 
-    return model
+    return model.to(device)
 
 class Plot:
 
@@ -111,7 +111,7 @@ def main():
     print("Using device: {}".format(device))
 
     model = SuperModelo(device)
-    model = load_best_model(best_epoch, model, output_dir=output_dir)
+    model = load_best_model(best_epoch, model, output_dir=output_dir, device=device)
 
     target_time = 25
     test_dataset = MocapDatasetLoader(input_window=50, output_window=target_time, stride=1, split="test", device=device)
