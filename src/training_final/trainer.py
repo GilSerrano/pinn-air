@@ -76,7 +76,7 @@ class Trainer:
             self.writer.add_scalar("Loss/train", torch.tensor(train_losses).mean().item(), epoch)
 
             # Compute the validation loss
-            eval_loss = self.comptute_validation_loss()
+            eval_loss = self.compute_validation_loss()
             self.writer.add_scalar("Loss/validation", eval_loss, epoch)
 
             # Check if we want to save the model parameters
@@ -92,7 +92,7 @@ class Trainer:
                 
                 # Write to a txt file the best epoch
                 with open(os.path.join(self.output_dir, "best_epoch.txt"), "w") as f:
-                    f.write(f"{epoch}\n")
+                    f.write(f"\n{epoch}")
                 
             # Save the validation losses over time
             self.val_epoch_loss.append(eval_loss)
@@ -105,7 +105,8 @@ class Trainer:
         self.optimizer.load_state_dict(checkpoint['optimizer'])
         print(f"Best model parameters found at epoch {self.best_epoch} with validation loss {checkpoint['val_loss']}")
 
-    def comptute_validation_loss(self):
+
+    def compute_validation_loss(self):
 
         self.model.eval()
         eval_loss = []
