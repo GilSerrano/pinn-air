@@ -76,15 +76,38 @@ class SuperModelo(nn.Module):
             outputs[:,i,:] = output[:,-1,:]
 
         return outputs
+
+    def set_loss_params(self, position_error, velocity_error, position_error_payload, continuity_last_input_first_output, output_continuity, quaternion_norm, quaternion_error, physics_error):
+
+        self.position_error = position_error
+        self.velocity_error = velocity_error
+        self.position_error_payload = position_error_payload
+        self.continuity_last_input_first_output = continuity_last_input_first_output
+        self.output_continuity = output_continuity
+        self.quaternion_norm = quaternion_norm
+        self.quaternion_error = quaternion_error
+        self.physics_error = physics_error
+
+        print("-------------------")
+        print("Loss params set to:")
+        print("-------------------")
+        print("position_error: " + str(self.position_error))
+        print("velocity_error: " + str(self.velocity_error))
+        print("position_error_payload: " + str(self.position_error_payload))
+        print("continuity_last_input_first_output: " + str(self.continuity_last_input_first_output))
+        print("output_continuity: " + str(self.output_continuity))
+        print("quaternion_norm: " + str(self.quaternion_norm))
+        print("quaternion_error: " + str(self.quaternion_error))
+        print("physics_error: " + str(self.physics_error))
     
 
     def compute_loss(self, y_hat, y, x, target_time, physics_model):
 
-        return 3 * position_error(y_hat, y, target_time) + \
-            1 * velocity_error(y_hat, y, target_time) + \
-            2 * position_error_payload(y_hat, y, target_time) + \
-            2 * continuity_last_input_first_output(y_hat, x) + \
-            1 * output_continuity(y_hat) + \
-            2 * quaternion_norm(y_hat) + \
-            1 * quaternion_error(y_hat, y, target_time) + \
-            5 * physics_error(y_hat, x, y, target_time, physics_model)
+        return self.position_error * position_error(y_hat, y, target_time) + \
+            self.velocity_error * velocity_error(y_hat, y, target_time) + \
+            self.position_error_payload * position_error_payload(y_hat, y, target_time) + \
+            self.continuity_last_input_first_output * continuity_last_input_first_output(y_hat, x) + \
+            self.output_continuity * output_continuity(y_hat) + \
+            self.quaternion_norm * quaternion_norm(y_hat) + \
+            self.quaternion_error * quaternion_error(y_hat, y, target_time) + \
+            self.physics_error * physics_error(y_hat, x, y, target_time, physics_model)
