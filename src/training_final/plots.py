@@ -82,9 +82,9 @@ class Plot:
             plt.plot(self.time2, torch.cat((z_last, self.y_hat[0, :, idx[2]]), dim=0).numpy(), linestyle="--", color="blue", label=gz_lbl)
 
             # Plot the real quantity
-            plt.plot(self.time, torch.cat((self.x[:, 0], self.y[:, idx[0]]), dim=0).numpy(), color=(1,0,0,0.6))
-            plt.plot(self.time, torch.cat((self.x[:, 1], self.y[:, idx[1]]), dim=0).numpy(), color=(0,1,0,0.7))
-            plt.plot(self.time, torch.cat((self.x[:, 2], self.y[:, idx[2]]), dim=0).numpy(), color=(0,0,1,0.5))
+            plt.plot(self.time, torch.cat((self.x[:, idx[0]], self.y[:, idx[0]]), dim=0).numpy(), color=(1,0,0,0.6))
+            plt.plot(self.time, torch.cat((self.x[:, idx[1]], self.y[:, idx[1]]), dim=0).numpy(), color=(0,1,0,0.7))
+            plt.plot(self.time, torch.cat((self.x[:, idx[2]], self.y[:, idx[2]]), dim=0).numpy(), color=(0,0,1,0.5))
 
             ylabel = kwargs.get('ylabel', "Position (m)")
             lgd_location = kwargs.get('lgd_location', "upper left")
