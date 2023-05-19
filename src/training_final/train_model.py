@@ -50,6 +50,7 @@ def main():
     print("Teacher forcing ratio: {}".format(parser.args.teacher_forcing_ratio))
     print("Teacher forcing decay: {}".format(parser.args.teacher_forcing_decay))
     print("Data augmentation: {}".format(parser.args.data_augmentation))
+    print("Dropout: {}".format(parser.args.dropout))
 
     # Create a custom output directory
     output = os.path.join(parser.args.output_path, "batch_size_" + str(parser.args.batch_size) + "_lr_" + str(parser.args.learning_rate) + "_wd_" + str(parser.args.weight_decay) + "_epochs_" + str(parser.args.num_epochs) + "_tfr_" + str(parser.args.teacher_forcing_ratio) + "_tfd_" + str(parser.args.teacher_forcing_decay) + "_da_" + str(parser.args.data_augmentation) + "_al_" + str(parser.args.augmentation_low) + "_ah_" + str(parser.args.augmentation_high) + "_use_attention_" + str(parser.args.use_attention) + "_seed_" + str(parser.args.seed)) + "/"
