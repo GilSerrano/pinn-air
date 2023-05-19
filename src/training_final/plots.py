@@ -176,6 +176,9 @@ def main():
         # Discard all the timesteps predicted except the first one
         y_hat = y_hat[0, 0, :]
 
+
+    
+
     # -------------------------------------------------------------------
     # Plots of physics only, Network only and groundtruth
     # -------------------------------------------------------------------
