@@ -3,10 +3,17 @@
 import os
 import torch
 import matplotlib.pyplot as plt
+<<<<<<< HEAD
 from mocap_dataset import MocapDatasetLoader
 
 from alpha_model import AlphaModel
+=======
+
+>>>>>>> 44e1227f373331cbe067946eccbb44f3196b0222
 from model import SuperModelo
+from alpha_model import AlphaModel
+from vehicle_model import DiscreteMultirotor
+from mocap_dataset import MocapDatasetLoader
 
 def fetch_best_epoch(output_dir="output/", file="best_epoch.txt"):
     """
@@ -98,43 +105,9 @@ class Plot:
 
             plt.savefig(output_dir+'/'+self.name+'.pdf')
 
+def plot_estimated_against_real(x, y, y_hat, time, time2, output_dir):
 
-def main():
-
-    # -------------------------------------------------------------------
-    # Plots for the regular test were we perform the recursive prediction
-    # ------------------------------------------------------------------- 
-    # TODO - add plots for the recursive prediction of the physics model
-    output_dir = './output'
-    best_epoch = fetch_best_epoch(output_dir)
-    print(best_epoch)
-    
-    # Set the device for performing training
-    device = "cuda" if torch.cuda.is_available() else "cpu"
-    print("Using device: {}".format(device))
-
-    model = SuperModelo(device)
-    model = load_best_model(best_epoch, model, output_dir=output_dir, device=device)
-
-    target_time = 25
-    test_dataset = MocapDatasetLoader(input_window=50, output_window=target_time, stride=1, split="test", device=device)
-    
-    # sampling time
-    Ts = 0.03
-
-    x, y = test_dataset[0]
-    x = x.to(device)
-    y = y.to(device)
-
-    u = y[..., 13:17]
-    y_hat = model(x[None, :, :], u[None, :, :])
-
-    time = Ts * torch.arange(0, x.shape[0] + y.shape[0]).numpy()
-    time2 = Ts * torch.arange(x.shape[0], x.shape[0] + y.shape[0]+1).numpy()
-
-    x = x.to("cpu")
-    y = y.to("cpu")
-    y_hat = y_hat.to("cpu")
+    plt.close('all')
 
     pos_plot = Plot(x[..., 0:3], y[..., 0:3], y_hat[..., 0:3], time, time2, name='position')
     vel_plot = Plot(x[..., 3:6], y[..., 3:6], y_hat[..., 3:6], time, time2, name='velocity')
@@ -153,9 +126,71 @@ def main():
     ld_args = {'gx_lbl': "$p_x^L$", 'gy_lbl': "$p_y^L$", 'gz_lbl': "$p_z^L$", 'ylabel': "Load Position (m)"}
     ld_plot.draw(output_dir, **ld_args)
 
+def main():
+
+    # -------------------------------------------------------------------
+    # Plots for the regular test were we perform the recursive prediction
+    # ------------------------------------------------------------------- 
+    # TODO - add plots for the recursive prediction of the physics model
+    output_dir = './output'
+    os.makedirs(output_dir, exist_ok=True)
+    best_epoch = fetch_best_epoch(output_dir)
+    print(best_epoch)
+    
+    # Set the device for performing training
+    device = "cuda" if torch.cuda.is_available() else "cpu"
+    print("Using device: {}".format(device))
+
+    model = SuperModelo(device)
+    model = load_best_model(best_epoch, model, output_dir=output_dir, device=device)
+
+    target_time = 25
+    test_dataset = MocapDatasetLoader(input_window=50, output_window=target_time, stride=1, split="test", device=device)
+    
+    # sampling time
+    Ts = 0.03
+    
+    # mass of the quadrotor
+    m = 1.0
+
+    physics_model = DiscreteMultirotor(Ts, m, device=device)
+
+    x, y = test_dataset[0]
+    x = x.to(device)
+    y = y.to(device)
+
+    # Run the physics model to check what it would predict
+    physics_model_result = torch.zeros((1, target_time, 10)).to(device)
+
+    # Set the initial state of teh physics model
+    input_x = x[-1, 0:10]
+    input_u = x[-1, 13:17]
+
+    for i in range(target_time):
+
+        physics_model_result[0, i, :] = physics_model.run(input_x[None, None, :], input_u[None, None, :])
+
+        input_x = physics_model_result[0, i, :]
+        input_u = y[i, 13:17]
+
+
+    u = y[..., 13:17]
+    y_hat = model(x[None, :, :], u[None, :, :])
+
+    time = Ts * torch.arange(0, x.shape[0] + y.shape[0]).numpy()
+    time2 = Ts * torch.arange(x.shape[0], x.shape[0] + y.shape[0]+1).numpy()
+
+    x = x.to("cpu")
+    y = y.to("cpu")
+    y_hat = y_hat.to("cpu")
+
+    plot_estimated_against_real(x, y, y_hat, time, time2, output_dir)
+
     # -------------------------------------------------------------------
     # Plots for the regular test were we perform 1 step prediction
-    # ------------------------------------------------------------------- 
+    # -------------------------------------------------------------------
+    output_dir = './output/1step' 
+    os.makedirs(output_dir, exist_ok=True)
     target_time = 25
     input_time = 50
     test_dataset = MocapDatasetLoader(input_window=input_time+target_time, output_window=target_time, stride=1, split="test", device=device)
@@ -164,7 +199,10 @@ def main():
     x = x.to(device)
     y = y.to(device)
 
-    for i in target_time:
+    num_predicted_state = 13
+    predicted_state = torch.zeros((1, target_time, num_predicted_state))
+
+    for i in range(target_time):
 
         # Get the input state and the input control for this timestep
         input = x[None, i:i+input_time, :]
@@ -176,8 +214,17 @@ def main():
         # Discard all the timesteps predicted except the first one
         y_hat = y_hat[0, 0, :]
 
+        # Save the prediction to plot later
+        predicted_state[0, i, :] = y_hat
 
-    
+    x = x.to("cpu")
+    y = y.to("cpu")
+    predicted_state = predicted_state.to("cpu")
+
+    time = Ts * torch.arange(0, x.shape[0] + y.shape[0]).numpy()
+    time2 = Ts * torch.arange(x.shape[0], x.shape[0] + y.shape[0]+1).numpy()
+
+    plot_estimated_against_real(x, y, predicted_state, time, time2, output_dir)
 
     # -------------------------------------------------------------------
     # Plots of physics only, Network only and groundtruth
