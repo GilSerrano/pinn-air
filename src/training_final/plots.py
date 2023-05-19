@@ -102,6 +102,10 @@ class Plot:
 
 def main():
 
+    # -------------------------------------------------------------------
+    # Plots for the regular test were we perform the recursive prediction
+    # ------------------------------------------------------------------- 
+    # TODO - add plots for the recursive prediction of the physics model
     output_dir = './output'
     best_epoch = fetch_best_epoch(output_dir)
     print(best_epoch)
@@ -124,7 +128,7 @@ def main():
     y = y.to(device)
 
     u = y[..., 13:17]
-    y_hat = model(x[None, :, :], u[None, :, :], target_time)
+    y_hat = model(x[None, :, :], u[None, :, :])
 
     time = Ts * torch.arange(0, x.shape[0] + y.shape[0]).numpy()
     time2 = Ts * torch.arange(x.shape[0], x.shape[0] + y.shape[0]+1).numpy()
@@ -149,6 +153,34 @@ def main():
 
     ld_args = {'gx_lbl': "$p_x^L$", 'gy_lbl': "$p_y^L$", 'gz_lbl': "$p_z^L$", 'ylabel': "Load Position (m)"}
     ld_plot.draw(output_dir, **ld_args)
+
+    # -------------------------------------------------------------------
+    # Plots for the regular test were we perform 1 step prediction
+    # ------------------------------------------------------------------- 
+    target_time = 25
+    input_time = 50
+    test_dataset = MocapDatasetLoader(input_window=input_time+target_time, output_window=target_time, stride=1, split="test", device=device)
+
+    x, y = test_dataset[0]
+    x = x.to(device)
+    y = y.to(device)
+
+    for i in target_time:
+
+        # Get the input state and the input control for this timestep
+        input = x[None, i:i+input_time, :]
+        u = y[None, i:i+target_time, 13:17]
+
+        # Perform the prediction
+        y_hat = model(input, u)
+
+        # Discard all the timesteps predicted except the first one
+        y_hat = y_hat[0, 0, :]
+
+    # -------------------------------------------------------------------
+    # Plots of physics only, Network only and groundtruth
+    # -------------------------------------------------------------------
+
 
 
 if __name__ == "__main__":
