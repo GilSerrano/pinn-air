@@ -1,5 +1,5 @@
 # hyper_mpc
-A Deep Reinforcement Learning Hyperparamenter Estimator for Model Predictive Control
+Physics-informed Neural Networks for Multirotor Slung Load Systems Modeling
 
 ## Installation
 

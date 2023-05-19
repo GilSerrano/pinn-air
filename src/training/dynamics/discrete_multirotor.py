@@ -1,6 +1,11 @@
 import torch
 from .utils import quaternion_to_matrix, matrix_to_quaternion, skew_symmetric
 
+def kronecker(A: torch.Tensor, B: torch.Tensor): 
+
+    return torch.einsum('ik,jl', B, A).reshape(A.size(0)*B.size(0),
+                                               A.size(1)*B.size(1)) 
+
 class DiscreteMultirotor:
     """
     Class that implements the dynamics of a discrete multirotor model
@@ -37,10 +42,12 @@ class DiscreteMultirotor:
         # ---------------------------------
         
         # The "A" matrix of the dynamic model for the linear dynamics
-        self.A = torch.kron(A_star, torch.eye(3, 3).to(device))
+        # self.A = torch.kron(A_star, torch.eye(3, 3).to(device))
+        self.A = kronecker(A_star, torch.eye(3, 3).to(device))
 
         # The "B" matrix of the dynamic model for the linear dynamics        
-        self.B = torch.kron(B_star, torch.eye(3,3).to(device))
+        # self.B = torch.kron(B_star, torch.eye(3,3).to(device))
+        self.B = kronecker(B_star, torch.eye(3,3).to(device))
 
     def run(self, x: torch.Tensor, u: torch.Tensor) -> torch.Tensor:
         """

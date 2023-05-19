@@ -34,13 +34,15 @@ def velocity_rmse(y_hat, y):
 def quaternion_rmse(y_hat, y):
 
     # Compute the discounted quaternion error
-    identity_quaternion = torch.tensor([1.0, 0.0, 0.0, 0.0]).to("cuda")
+    # identity_quaternion = torch.tensor([1.0, 0.0, 0.0, 0.0]).to("cuda")
+    identity_quaternion = torch.tensor([1.0, 0.0, 0.0, 0.0])
 
     return torch.sqrt(torch.sum((torch.norm(quaternion_multiply(y[..., 6:10], quaternion_invert(y_hat[..., 6:10])) - identity_quaternion, dim=2) ** 2)) / (y.shape[0] * y.shape[1]))
 
 def rmse_all_state(y_hat, y):
 
-    identity_quaternion = torch.tensor([1.0, 0.0, 0.0, 0.0]).to("cuda")
+    # identity_quaternion = torch.tensor([1.0, 0.0, 0.0, 0.0]).to("cuda")
+    identity_quaternion = torch.tensor([1.0, 0.0, 0.0, 0.0])
 
     error_pos_vel = y_hat[:, :, 0:6] - y[:, :, 0:6]
     error_payload = y_hat[:, :, 10:13] - y[:, :, 10:13]

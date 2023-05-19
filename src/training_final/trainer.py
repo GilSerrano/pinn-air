@@ -92,7 +92,7 @@ class Trainer:
                 
                 # Write to a txt file the best epoch
                 with open(os.path.join(self.output_dir, "best_epoch.txt"), "w") as f:
-                    f.write(f"{epoch}")
+                    f.write(f"{epoch}\n")
                 
             # Save the validation losses over time
             self.val_epoch_loss.append(eval_loss)

@@ -79,7 +79,7 @@ class SuperModelo(nn.Module):
 
         return outputs
 
-torch.set_default_device("cuda")
+# torch.set_default_device("cuda")
 model = SuperModelo().to("cuda")
 optimizer = AdamW(model.parameters(), lr=1E-4, weight_decay=0.05)
 Ts = 0.03
