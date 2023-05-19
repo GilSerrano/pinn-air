@@ -85,12 +85,12 @@ class Plot:
         self.fig.subplots_adjust(bottom=0.25, top=0.9, left=0.15, right=0.9)
         plt.grid()
 
-        plt.show()
+        plt.savefig("plots.pdf")
 
 
 def main():
 
-    output_dir = '.'
+    output_dir = 'output'
     best_epoch = fetch_best_epoch(output_dir)
 
     # model, _ = load_best_model(best_epoch, model, optimizer, output_dir)

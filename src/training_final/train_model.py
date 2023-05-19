@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+import os
 import torch
 import random
 import numpy as np
@@ -50,6 +51,9 @@ def main():
     print("Teacher forcing decay: {}".format(parser.args.teacher_forcing_decay))
     print("Data augmentation: {}".format(parser.args.data_augmentation))
 
+    # Create a custom output directory
+    output = os.path.join(parser.args.output_path, "batch_size_" + str(parser.args.batch_size) + "_lr_" + str(parser.args.learning_rate) + "_wd_" + str(parser.args.weight_decay) + "_epochs_" + str(parser.args.num_epochs) + "_tfr_" + str(parser.args.teacher_forcing_ratio) + "_tfd_" + str(parser.args.teacher_forcing_decay) + "_da_" + str(parser.args.data_augmentation) + "_al_" + str(parser.args.augmentation_low) + "_ah_" + str(parser.args.augmentation_high) + "_use_attention_" + str(parser.args.use_attention) + "_seed_" + str(parser.args.seed)) + "/"
+
     # Set the sampling rate and the mass of the vehicle
     Ts = 0.03       # seconds
     mass = 1.0      # kilograms
@@ -62,7 +66,7 @@ def main():
     vehicle_model = DiscreteMultirotor(Ts, mass, device)
 
     # Create the network model
-    #model = AlphaModel(output_dim=13, num_layers=3, dropout=0.2, device=device)
+    #model = AlphaModel(output_dim=13, num_layers=3, dropout=parser.args.dropout, device=device)
     model = SuperModelo(device)
 
     # Create the optimizer
@@ -107,7 +111,7 @@ def main():
         eval_dataloader=validation_loader, 
         optimizer=optimizer, 
         criterion=criterion, 
-        output_dir=parser.args.output_path, 
+        output_dir=output, 
         teacher_forcing_ratio=parser.args.teacher_forcing_ratio, 
         teacher_forcing_decay=parser.args.teacher_forcing_decay,
         device=device
@@ -115,6 +119,7 @@ def main():
 
     # Train the model
     trainer.train_multiple_epochs(num_epochs=parser.args.num_epochs)
+    trainer.plot_loss()
 
 if __name__ == "__main__":
     main()
