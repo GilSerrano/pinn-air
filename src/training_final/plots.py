@@ -3,13 +3,6 @@
 import os
 import torch
 import matplotlib.pyplot as plt
-<<<<<<< HEAD
-from mocap_dataset import MocapDatasetLoader
-
-from alpha_model import AlphaModel
-=======
-
->>>>>>> 44e1227f373331cbe067946eccbb44f3196b0222
 from model import SuperModelo
 from alpha_model import AlphaModel
 from vehicle_model import DiscreteMultirotor
