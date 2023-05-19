@@ -5,7 +5,6 @@ import torch
 import matplotlib.pyplot as plt
 from mocap_dataset import MocapDatasetLoader
 
-
 from alpha_model import AlphaModel
 from model import SuperModelo
 
