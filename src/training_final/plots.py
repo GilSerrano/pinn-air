@@ -40,11 +40,12 @@ def load_best_model(best_epoch, model, output_dir="./output", device="cpu"):
 
 class Plot:
 
-    def __init__(self, x, y, y_hat, time, time2, name='plot'):
+    def __init__(self, x, y, y_hat, time, time2, y_physics=[], name='plot'):
         self.name = name
         self.x = x
         self.y = y
         self.y_hat = y_hat
+        self.y_physics = y_physics
         self.time = time
         self.time2 = time2
 
@@ -73,6 +74,9 @@ class Plot:
                 plt.plot(self.time2, torch.cat((w_last, self.y_hat[0, :, 0]), dim=0).numpy(), linestyle="--", color="orange", label=gw_lbl)
                 plt.plot(self.time, torch.cat((self.x[:, 0], self.y[:, 0]), dim=0).numpy(), color=(1, 220/255, 0.0, 1.0))
 
+                if len(self.y_physics):
+                    plt.plot(self.time, torch.cat((self.x[:, 0], self.y_physics[0, :, 0]), dim=0).numpy(), linestyle=":", color=(1, 180/255, 0.0, 1.0))
+
             x_last, y_last, z_last = self.x[-1, idx[0]] * torch.ones(1), \
                                         self.x[-1, idx[1]] * torch.ones(1), self.x[-1, idx[2]] * torch.ones(1)
             
@@ -84,6 +88,12 @@ class Plot:
             plt.plot(self.time, torch.cat((self.x[:, idx[0]], self.y[:, idx[0]]), dim=0).numpy(), color=(1,0,0,0.6))
             plt.plot(self.time, torch.cat((self.x[:, idx[1]], self.y[:, idx[1]]), dim=0).numpy(), color=(0,1,0,0.7))
             plt.plot(self.time, torch.cat((self.x[:, idx[2]], self.y[:, idx[2]]), dim=0).numpy(), color=(0,0,1,0.5))
+
+            # Plot the time evolution of the multirotor dynamics without load
+            if len(self.y_physics):
+                plt.plot(self.time, torch.cat((self.x[:, idx[0]], self.y_physics[0, :, idx[0]]), dim=0).numpy(), linestyle=":", color=(1,0,0,0.3))
+                plt.plot(self.time, torch.cat((self.x[:, idx[1]], self.y_physics[0, :, idx[1]]), dim=0).numpy(), linestyle=":", color=(0,1,0,0.4))
+                plt.plot(self.time, torch.cat((self.x[:, idx[2]], self.y_physics[0, :, idx[2]]), dim=0).numpy(), linestyle=":", color=(0,0,1,0.2))
 
             ylabel = kwargs.get('ylabel', "Position (m)")
             lgd_location = kwargs.get('lgd_location', "upper left")
@@ -99,14 +109,20 @@ class Plot:
             plt.savefig(output_dir+'/'+self.name+'.pdf')
 
 
-def plot_estimated_against_real(x, y, y_hat, time, time2, output_dir):
+def plot_estimated_against_real(x, y, y_hat, time, time2, output_dir, y_physics=[]):
 
     plt.close('all')
 
-    pos_plot = Plot(x[..., 0:3], y[..., 0:3], y_hat[..., 0:3], time, time2, name='position')
-    vel_plot = Plot(x[..., 3:6], y[..., 3:6], y_hat[..., 3:6], time, time2, name='velocity')
-    qtr_plot = Plot(x[..., 6:10], y[..., 6:10], y_hat[..., 6:10], time, time2, name='quaternion')
-    ld_plot  = Plot(x[..., 10:13], y[..., 10:13], y_hat[..., 10:13], time, time2, name='load')
+    if len(y_physics):
+        pos_plot = Plot(x[..., 0:3], y[..., 0:3], y_hat[..., 0:3], time, time2, y_physics=y_physics[..., 0:3], name='position')
+        vel_plot = Plot(x[..., 3:6], y[..., 3:6], y_hat[..., 3:6], time, time2,  y_physics=y_physics[..., 3:6], name='velocity')
+        qtr_plot = Plot(x[..., 6:10], y[..., 6:10], y_hat[..., 6:10], time, time2, y_physics=y_physics[..., 6:10], name='quaternion')
+        ld_plot  = Plot(x[..., 10:13], y[..., 10:13], y_hat[..., 10:13], time, time2, name='load')
+    else:
+        pos_plot = Plot(x[..., 0:3], y[..., 0:3], y_hat[..., 0:3], time, time2, name='position')
+        vel_plot = Plot(x[..., 3:6], y[..., 3:6], y_hat[..., 3:6], time, time2, name='velocity')
+        qtr_plot = Plot(x[..., 6:10], y[..., 6:10], y_hat[..., 6:10], time, time2, name='quaternion')
+        ld_plot  = Plot(x[..., 10:13], y[..., 10:13], y_hat[..., 10:13], time, time2, name='load')
 
     pos_args = {'gx_lbl': "$p_x$", 'gy_lbl': "$p_y$", 'gz_lbl': "$p_z$", 'ylabel': "Position (m)"}
     pos_plot.draw(output_dir, **pos_args)
@@ -177,8 +193,9 @@ def main():
     x = x.to("cpu")
     y = y.to("cpu")
     y_hat = y_hat.to("cpu")
+    physics_model_result = physics_model_result.to("cpu")
 
-    plot_estimated_against_real(x, y, y_hat, time, time2, output_dir)
+    plot_estimated_against_real(x, y, y_hat, time, time2, output_dir, y_physics=physics_model_result)
 
     # -------------------------------------------------------------------
     # Plots for the regular test were we perform 1-step-ahead prediction
