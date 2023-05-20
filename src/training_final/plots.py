@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 import os
 import torch
-from mpl_toolkits.mplot3d import Axes3D
 import matplotlib.pyplot as plt
 
 # Models
@@ -26,8 +25,17 @@ class Plot:
         self.time = time
         self.time2 = time2
 
+        # (plane, (elev, azim, roll))
+        Plot.VIEWS = [('XY',   (90, -90, 0)),
+                      ('XZ',    (0, -90, 0)),
+                      ('YZ',    (0,   0, 0))]
+
         self.fig = plt.figure(num=self.name, figsize=(4, 2), dpi=300)
-        self.fig3d = plt.figure(num=self.name_3d, figsize=(5, 5), dpi=300)
+        self.fig_3d_dict = {
+            'XY': plt.figure(num=self.name_3d+'XY', figsize=(5, 5), dpi=300),
+            'XZ': plt.figure(num=self.name_3d+'XZ', figsize=(5, 5), dpi=300),
+            'YZ': plt.figure(num=self.name_3d+'YZ', figsize=(5, 5), dpi=300)
+        }
 
     def draw(self, output_dir, **kwargs):
 
@@ -86,7 +94,7 @@ class Plot:
 
             plt.savefig(output_dir+'/'+self.name+'.pdf')
 
-    def draw3d(self, output_dir, **kwargs):
+    def draw3d_primary_planes(self, output_dir, **kwargs):
 
         gx_lbl = kwargs.get('gx_lbl', "X position (m)")
         gy_lbl = kwargs.get('gy_lbl', "Y position (m)")
@@ -94,9 +102,33 @@ class Plot:
         ax_title = kwargs.get('ax_title', "Position")
         lgd_location = kwargs.get('lgd_location', "best")
 
-        # set right figure
-        plt.figure(num=self.name_3d)
-        ax = plt.axes(projection=Axes3D.name)
+        for plane, angles in Plot.VIEWS:
+            # set right figure
+            plt.figure(num=self.name_3d+plane)
+
+            ax = plt.axes(projection='3d')
+            ax.set_xlabel(gx_lbl, labelpad=20)
+            ax.set_ylabel(gy_lbl, labelpad=20)
+            ax.set_zlabel(gz_lbl, labelpad=20)
+            ax.set_proj_type('ortho')
+            ax.view_init(elev=angles[0], azim=angles[1])
+
+            if plane == 'XY':
+                ax.set_zticklabels([])
+                ax.set_zlabel('')
+                kwargs["lgd_box_to_anchor"] = (0.5, 0.4)
+            elif plane == 'XZ':
+                ax.set_yticklabels([])
+                ax.set_ylabel('')
+                kwargs["lgd_box_to_anchor"] = (0.6, 0.5)
+            else: #YZ
+                ax.set_xticklabels([])
+                ax.set_xlabel('')
+                kwargs["lgd_box_to_anchor"] = (0.8, 0.5)
+
+            self.draw3d(ax, output_dir, name=self.name_3d+plane, **kwargs)
+
+    def draw3d(self, ax, output_dir, name, **kwargs):
 
         with torch.no_grad():
 
@@ -116,18 +148,20 @@ class Plot:
             pz = torch.cat((z_last, self.y[:, 2]), dim=0).numpy()
             ax.plot3D(px, py, pz, label='Actual')
 
-            ax.set_xlabel(gx_lbl, labelpad=20)
-            ax.set_ylabel(gy_lbl, labelpad=20)
+            # ax.set_xlabel(gx_lbl, labelpad=20)
+            # ax.set_ylabel(gy_lbl, labelpad=20)
             # ax.set_zlabel(gz_lbl, labelpad=20)
-            ax.legend(loc=lgd_location, bbox_to_anchor=(0.55, 0.8), fontsize=10)
+
+            lgd_location = kwargs.get('lgd_location', "best")
+            lgd_box_to_anchor = kwargs.get('lgd_box_to_anchor', (0.55, 0.8))
+            ax.legend(loc=lgd_location, bbox_to_anchor=lgd_box_to_anchor, fontsize=10)
+            # ax.legend(loc=lgd_location)
             # ax.set_title(ax_title, fontsize=12)
 
             ax.tick_params(labelsize=10)
-            ax.view_init(azim=0, elev=90)
-            ax.set_zticklabels([])
             ax.grid()
 
-            plt.savefig(output_dir+'/'+self.name_3d+'.pdf')
+            plt.savefig(output_dir + '/' + name + '.pdf')
 
 
 def plot_estimated_against_real(x, y, y_hat, time, time2, output_dir, y_physics=[]):
@@ -147,7 +181,7 @@ def plot_estimated_against_real(x, y, y_hat, time, time2, output_dir, y_physics=
 
     pos_args = {'gx_lbl': "$p_x$", 'gy_lbl': "$p_y$", 'gz_lbl': "$p_z$", 'ylabel': "Position (m)"}
     pos_plot.draw(output_dir, **pos_args)
-    pos_plot.draw3d(output_dir)
+    pos_plot.draw3d_primary_planes(output_dir)
 
     vel_args = {'gx_lbl': "$v_x$", 'gy_lbl': "$v_y$", 'gz_lbl': "$v_z$", 'ylabel': "Velocity (m/s)"}
     vel_plot.draw(output_dir, **vel_args)
@@ -230,7 +264,7 @@ def main():
     input_time = 50
     test_dataset = MocapDatasetLoader(input_window=input_time+target_time, output_window=target_time, stride=1, split="test", device=device)
 
-    x, y = test_dataset[666]
+    x, y = test_dataset[99]
     x = x.to(device)
     y = y.to(device)
 

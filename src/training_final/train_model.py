@@ -8,6 +8,7 @@ import numpy as np
 from trainer import Trainer
 from model import SuperModelo
 from alpha_model import AlphaModel
+from omega_model import OmegaModel
 from arg_parser import ArgsParser
 from vehicle_model import DiscreteMultirotor
 
@@ -68,7 +69,8 @@ def main():
 
     # Create the network model
     #model = AlphaModel(output_dim=13, num_layers=3, dropout=parser.args.dropout, device=device)
-    model = SuperModelo(device)
+    model = OmegaModel(output_dim=13, num_layers=3, dropout=parser.args.dropout, device=device)
+    # model = SuperModelo(device)
 
     # Set the loss parameters
     model.set_loss_params(
