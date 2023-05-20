@@ -1,41 +1,18 @@
 #!/usr/bin/env python3
-
 import os
 import torch
 from mpl_toolkits.mplot3d import Axes3D
 import matplotlib.pyplot as plt
+
+# Models
 from model import SuperModelo
 from alpha_model import AlphaModel
 from vehicle_model import DiscreteMultirotor
 from mocap_dataset import MocapDatasetLoader
 
-def fetch_best_epoch(output_dir="output/", file="best_epoch.txt"):
-    """
-        fetch the model from the best epoch
-        it corresponds to the last line in the file
-    """
-
-    with open(os.path.join(output_dir, file), "rb") as f:
-        try:  # catch OSError in case of a one line file 
-            f.seek(-2, os.SEEK_END)
-            while f.read(1) != b'\n':
-                f.seek(-2, os.SEEK_CUR)
-        except OSError:
-            f.seek(0)
-        best_epoch = f.readline().decode()
-
-    return best_epoch
-
-
-def load_best_model(best_epoch, model, output_dir="./output", device="cpu"):
-
-    checkpoint_path = os.path.join(output_dir, f"epoch_{best_epoch}_best_model.pt")
-    print("Loading: {}".format(checkpoint_path))
-
-    checkpoint = torch.load(checkpoint_path)
-    model.load_state_dict(checkpoint['model'])
-
-    return model.to(device)
+# RMSE metrics and utils
+from utils import load_best_model, fetch_best_epoch
+from rmse import compute_all_rmse
 
 class Plot:
 
@@ -241,6 +218,9 @@ def main():
 
     plot_estimated_against_real(x, y, y_hat, time, time2, output_dir, y_physics=physics_model_result)
 
+    # Compute all the RMSE metrics for this particular trajectory
+    compute_all_rmse(y_hat, y[None,...])
+
     # -------------------------------------------------------------------
     # Plots for the regular test were we perform 1-step-ahead prediction
     # -------------------------------------------------------------------
@@ -280,6 +260,9 @@ def main():
     time2 = Ts * torch.arange(x.shape[0], x.shape[0] + y.shape[0]+1).numpy()
 
     plot_estimated_against_real(x, y, predicted_state, time, time2, output_dir)
+
+    # Compute all the RMSE metrics for this particular trajectory
+    compute_all_rmse(y_hat, y[None,...])
 
     # -------------------------------------------------------------------
     # Plots of physics only, Network only and groundtruth
