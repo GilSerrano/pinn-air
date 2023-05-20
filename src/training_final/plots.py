@@ -2,8 +2,8 @@
 
 import os
 import torch
+from mpl_toolkits.mplot3d import Axes3D
 import matplotlib.pyplot as plt
-
 from model import SuperModelo
 from alpha_model import AlphaModel
 from vehicle_model import DiscreteMultirotor
@@ -28,8 +28,6 @@ def fetch_best_epoch(output_dir="output/", file="best_epoch.txt"):
 
 
 def load_best_model(best_epoch, model, output_dir="./output", device="cpu"):
-    
-    print(f"epoch_{best_epoch}_best_model.pt")
 
     checkpoint_path = os.path.join(output_dir, f"epoch_{best_epoch}_best_model.pt")
     print("Loading: {}".format(checkpoint_path))
@@ -41,15 +39,18 @@ def load_best_model(best_epoch, model, output_dir="./output", device="cpu"):
 
 class Plot:
 
-    def __init__(self, x, y, y_hat, time, time2, name='plot'):
+    def __init__(self, x, y, y_hat, time, time2, y_physics=[], name='plot'):
         self.name = name
+        self.name_3d = self.name+'3d'
         self.x = x
         self.y = y
         self.y_hat = y_hat
+        self.y_physics = y_physics
         self.time = time
         self.time2 = time2
 
         self.fig = plt.figure(num=self.name, figsize=(4, 2), dpi=300)
+        self.fig3d = plt.figure(num=self.name_3d, figsize=(5, 5), dpi=300)
 
     def draw(self, output_dir, **kwargs):
 
@@ -74,6 +75,9 @@ class Plot:
                 plt.plot(self.time2, torch.cat((w_last, self.y_hat[0, :, 0]), dim=0).numpy(), linestyle="--", color="orange", label=gw_lbl)
                 plt.plot(self.time, torch.cat((self.x[:, 0], self.y[:, 0]), dim=0).numpy(), color=(1, 220/255, 0.0, 1.0))
 
+                if len(self.y_physics): # check if physics evolution is to be plotted
+                    plt.plot(self.time, torch.cat((self.x[:, 0], self.y_physics[0, :, 0]), dim=0).numpy(), linestyle=":", color=(1, 180/255, 0.0, 1.0))
+
             x_last, y_last, z_last = self.x[-1, idx[0]] * torch.ones(1), \
                                         self.x[-1, idx[1]] * torch.ones(1), self.x[-1, idx[2]] * torch.ones(1)
             
@@ -85,6 +89,12 @@ class Plot:
             plt.plot(self.time, torch.cat((self.x[:, idx[0]], self.y[:, idx[0]]), dim=0).numpy(), color=(1,0,0,0.6))
             plt.plot(self.time, torch.cat((self.x[:, idx[1]], self.y[:, idx[1]]), dim=0).numpy(), color=(0,1,0,0.7))
             plt.plot(self.time, torch.cat((self.x[:, idx[2]], self.y[:, idx[2]]), dim=0).numpy(), color=(0,0,1,0.5))
+
+            # Plot the time evolution of the multirotor dynamics without load
+            if len(self.y_physics):
+                plt.plot(self.time, torch.cat((self.x[:, idx[0]], self.y_physics[0, :, idx[0]]), dim=0).numpy(), linestyle=":", color=(1,0,0,0.3))
+                plt.plot(self.time, torch.cat((self.x[:, idx[1]], self.y_physics[0, :, idx[1]]), dim=0).numpy(), linestyle=":", color=(0,1,0,0.4))
+                plt.plot(self.time, torch.cat((self.x[:, idx[2]], self.y_physics[0, :, idx[2]]), dim=0).numpy(), linestyle=":", color=(0,0,1,0.2))
 
             ylabel = kwargs.get('ylabel', "Position (m)")
             lgd_location = kwargs.get('lgd_location', "upper left")
@@ -99,17 +109,68 @@ class Plot:
 
             plt.savefig(output_dir+'/'+self.name+'.pdf')
 
-def plot_estimated_against_real(x, y, y_hat, time, time2, output_dir):
+    def draw3d(self, output_dir, **kwargs):
+
+        gx_lbl = kwargs.get('gx_lbl', "X position (m)")
+        gy_lbl = kwargs.get('gy_lbl', "Y position (m)")
+        gz_lbl = kwargs.get('gz_lbl', "Z position (m)")
+        ax_title = kwargs.get('ax_title', "Position")
+        lgd_location = kwargs.get('lgd_location', "best")
+
+        # set right figure
+        plt.figure(num=self.name_3d)
+        ax = plt.axes(projection=Axes3D.name)
+
+        with torch.no_grad():
+
+            x_last, y_last, z_last = self.x[-1, 0] * torch.ones(1), \
+                                    self.x[-1, 1] * torch.ones(1), self.x[-1, 2] * torch.ones(1)
+
+            px_hat = torch.cat((x_last, self.y_hat[0, :, 0]), dim=0).numpy()
+            py_hat = torch.cat((y_last, self.y_hat[0, :, 1]), dim=0).numpy()
+            pz_hat = torch.cat((z_last, self.y_hat[0, :, 2]), dim=0).numpy()
+            ax.plot3D(px_hat, py_hat, pz_hat, linestyle="--", label='Prediction')
+
+            # Initial point
+            ax.scatter(x_last, y_last, z_last, c='green', marker='*', s=50)
+
+            px = torch.cat((x_last, self.y[:, 0]), dim=0).numpy()
+            py = torch.cat((y_last, self.y[:, 1]), dim=0).numpy()
+            pz = torch.cat((z_last, self.y[:, 2]), dim=0).numpy()
+            ax.plot3D(px, py, pz, label='Actual')
+
+            ax.set_xlabel(gx_lbl, labelpad=20)
+            ax.set_ylabel(gy_lbl, labelpad=20)
+            # ax.set_zlabel(gz_lbl, labelpad=20)
+            ax.legend(loc=lgd_location, bbox_to_anchor=(0.55, 0.8), fontsize=10)
+            # ax.set_title(ax_title, fontsize=12)
+
+            ax.tick_params(labelsize=10)
+            ax.view_init(azim=0, elev=90)
+            ax.set_zticklabels([])
+            ax.grid()
+
+            plt.savefig(output_dir+'/'+self.name_3d+'.pdf')
+
+
+def plot_estimated_against_real(x, y, y_hat, time, time2, output_dir, y_physics=[]):
 
     plt.close('all')
 
-    pos_plot = Plot(x[..., 0:3], y[..., 0:3], y_hat[..., 0:3], time, time2, name='position')
-    vel_plot = Plot(x[..., 3:6], y[..., 3:6], y_hat[..., 3:6], time, time2, name='velocity')
-    qtr_plot = Plot(x[..., 6:10], y[..., 6:10], y_hat[..., 6:10], time, time2, name='quaternion')
-    ld_plot  = Plot(x[..., 10:13], y[..., 10:13], y_hat[..., 10:13], time, time2, name='load')
+    if len(y_physics):
+        pos_plot = Plot(x[..., 0:3], y[..., 0:3], y_hat[..., 0:3], time, time2, y_physics=y_physics[..., 0:3], name='position')
+        vel_plot = Plot(x[..., 3:6], y[..., 3:6], y_hat[..., 3:6], time, time2,  y_physics=y_physics[..., 3:6], name='velocity')
+        qtr_plot = Plot(x[..., 6:10], y[..., 6:10], y_hat[..., 6:10], time, time2, y_physics=y_physics[..., 6:10], name='quaternion')
+        ld_plot  = Plot(x[..., 10:13], y[..., 10:13], y_hat[..., 10:13], time, time2, name='load')
+    else:
+        pos_plot = Plot(x[..., 0:3], y[..., 0:3], y_hat[..., 0:3], time, time2, name='position')
+        vel_plot = Plot(x[..., 3:6], y[..., 3:6], y_hat[..., 3:6], time, time2, name='velocity')
+        qtr_plot = Plot(x[..., 6:10], y[..., 6:10], y_hat[..., 6:10], time, time2, name='quaternion')
+        ld_plot  = Plot(x[..., 10:13], y[..., 10:13], y_hat[..., 10:13], time, time2, name='load')
 
     pos_args = {'gx_lbl': "$p_x$", 'gy_lbl': "$p_y$", 'gz_lbl': "$p_z$", 'ylabel': "Position (m)"}
     pos_plot.draw(output_dir, **pos_args)
+    pos_plot.draw3d(output_dir)
 
     vel_args = {'gx_lbl': "$v_x$", 'gy_lbl': "$v_y$", 'gz_lbl': "$v_z$", 'ylabel': "Velocity (m/s)"}
     vel_plot.draw(output_dir, **vel_args)
@@ -120,16 +181,15 @@ def plot_estimated_against_real(x, y, y_hat, time, time2, output_dir):
     ld_args = {'gx_lbl': "$p_x^L$", 'gy_lbl': "$p_y^L$", 'gz_lbl': "$p_z^L$", 'ylabel': "Load Position (m)"}
     ld_plot.draw(output_dir, **ld_args)
 
+
 def main():
 
     # -------------------------------------------------------------------
     # Plots for the regular test were we perform the recursive prediction
     # ------------------------------------------------------------------- 
-    # TODO - add plots for the recursive prediction of the physics model
     output_dir = './output'
     os.makedirs(output_dir, exist_ok=True)
     best_epoch = fetch_best_epoch(output_dir)
-    print(best_epoch)
     
     # Set the device for performing training
     device = "cuda" if torch.cuda.is_available() else "cpu"
@@ -156,7 +216,7 @@ def main():
     # Run the physics model to check what it would predict
     physics_model_result = torch.zeros((1, target_time, 10)).to(device)
 
-    # Set the initial state of teh physics model
+    # Set the initial state of the physics model
     input_x = x[-1, 0:10]
     input_u = x[-1, 13:17]
 
@@ -177,11 +237,12 @@ def main():
     x = x.to("cpu")
     y = y.to("cpu")
     y_hat = y_hat.to("cpu")
+    physics_model_result = physics_model_result.to("cpu")
 
-    plot_estimated_against_real(x, y, y_hat, time, time2, output_dir)
+    plot_estimated_against_real(x, y, y_hat, time, time2, output_dir, y_physics=physics_model_result)
 
     # -------------------------------------------------------------------
-    # Plots for the regular test were we perform 1 step prediction
+    # Plots for the regular test were we perform 1-step-ahead prediction
     # -------------------------------------------------------------------
     output_dir = './output/1step' 
     os.makedirs(output_dir, exist_ok=True)
@@ -189,7 +250,7 @@ def main():
     input_time = 50
     test_dataset = MocapDatasetLoader(input_window=input_time+target_time, output_window=target_time, stride=1, split="test", device=device)
 
-    x, y = test_dataset[0]
+    x, y = test_dataset[666]
     x = x.to(device)
     y = y.to(device)
 
