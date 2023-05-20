@@ -98,6 +98,7 @@ class Plot:
 
             plt.savefig(output_dir+'/'+self.name+'.pdf')
 
+
 def plot_estimated_against_real(x, y, y_hat, time, time2, output_dir):
 
     plt.close('all')
@@ -119,12 +120,12 @@ def plot_estimated_against_real(x, y, y_hat, time, time2, output_dir):
     ld_args = {'gx_lbl': "$p_x^L$", 'gy_lbl': "$p_y^L$", 'gz_lbl': "$p_z^L$", 'ylabel': "Load Position (m)"}
     ld_plot.draw(output_dir, **ld_args)
 
+
 def main():
 
     # -------------------------------------------------------------------
     # Plots for the regular test were we perform the recursive prediction
     # ------------------------------------------------------------------- 
-    # TODO - add plots for the recursive prediction of the physics model
     output_dir = './output'
     os.makedirs(output_dir, exist_ok=True)
     best_epoch = fetch_best_epoch(output_dir)
@@ -155,7 +156,7 @@ def main():
     # Run the physics model to check what it would predict
     physics_model_result = torch.zeros((1, target_time, 10)).to(device)
 
-    # Set the initial state of teh physics model
+    # Set the initial state of the physics model
     input_x = x[-1, 0:10]
     input_u = x[-1, 13:17]
 
@@ -180,7 +181,7 @@ def main():
     plot_estimated_against_real(x, y, y_hat, time, time2, output_dir)
 
     # -------------------------------------------------------------------
-    # Plots for the regular test were we perform 1 step prediction
+    # Plots for the regular test were we perform 1-step-ahead prediction
     # -------------------------------------------------------------------
     output_dir = './output/1step' 
     os.makedirs(output_dir, exist_ok=True)
