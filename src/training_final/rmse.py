@@ -5,7 +5,7 @@ from model import SuperModelo
 from alpha_model import AlphaModel
 from omega_model import OmegaModel
 from mocap_dataset import MocapDatasetLoader
-from utils import load_best_model, fetch_best_epoch
+from utils import load_best_model, fetch_best_epoch, ArgsParser
 from math_utils import quaternion_multiply, quaternion_invert
 
 def position_rmse(y_hat, y):
@@ -26,13 +26,13 @@ def velocity_rmse(y_hat, y):
 def quaternion_rmse(y_hat, y):
 
     # Compute the discounted quaternion error
-    identity_quaternion = torch.tensor([1.0, 0.0, 0.0, 0.0])
+    identity_quaternion = torch.tensor([1.0, 0.0, 0.0, 0.0]).to(y.device)
 
     return torch.sqrt(torch.sum((torch.norm(quaternion_multiply(y[..., 6:10], quaternion_invert(y_hat[..., 6:10])) - identity_quaternion, dim=2) ** 2)) / (y.shape[0] * y.shape[1]))
 
 def rmse_all_state(y_hat, y):
 
-    identity_quaternion = torch.tensor([1.0, 0.0, 0.0, 0.0])
+    identity_quaternion = torch.tensor([1.0, 0.0, 0.0, 0.0]).to(y.device)
 
     error_pos_vel = y_hat[:, :, 0:6] - y[:, :, 0:6]
     error_payload = y_hat[:, :, 10:13] - y[:, :, 10:13]
@@ -44,25 +44,47 @@ def rmse_all_state(y_hat, y):
     # Compute the RMSE
     return torch.sqrt(torch.sum((torch.norm(error, dim=2) ** 2)) / (y.shape[0] * y.shape[1]))
 
-def compute_all_rmse(y_hat, y):
+def rmse_all_no_load(y_hat, y):
+    
+    identity_quaternion = torch.tensor([1.0, 0.0, 0.0, 0.0])
 
-    rmse_position = position_rmse(y_hat, y[None,...])
-    rmse_velocity = velocity_rmse(y_hat, y[None,...])
-    rmse_quaternion = quaternion_rmse(y_hat, y[None,...])
-    rmse_payload = position_rmse_payload(y_hat, y[None,...])
-    rmse_all = rmse_all_state(y_hat, y[None,...])
+    error_pos_vel = y_hat[:, :, 0:6] - y[:, :, 0:6]
+    error_quaternion = quaternion_multiply(y[..., 6:10], quaternion_invert(y_hat[..., 6:10])) - identity_quaternion
 
+    # Concatenate the errors
+    error = torch.cat([error_pos_vel, error_quaternion], dim=2)
+
+    # Compute the RMSE
+    return torch.sqrt(torch.sum((torch.norm(error, dim=2) ** 2)) / (y.shape[0] * y.shape[1]))
+
+def compute_all_rmse(y_hat, y, expand_y=True, compute_load=True):
+
+    y = y[None,...] if expand_y else y
+
+    rmse_position = position_rmse(y_hat, y)
+    rmse_velocity = velocity_rmse(y_hat, y)
+    rmse_quaternion = quaternion_rmse(y_hat, y)
     print("RMSE position: {}".format(rmse_position))
-    print("RMSE payload: {}".format(rmse_payload))
     print("RMSE velocity: {}".format(rmse_velocity))
     print("RMSE quaternion: {}".format(rmse_quaternion))
-    print("RMSE all: {}".format(rmse_all))
-    print("RMSE sum: {}".format(rmse_position + rmse_payload + rmse_velocity + rmse_quaternion))
+
+    if compute_load:
+        rmse_payload = position_rmse_payload(y_hat, y)
+        rmse_all = rmse_all_state(y_hat, y)
+        print("RMSE all: {}".format(rmse_all))
+        print("RMSE payload: {}".format(rmse_payload))
+        print("RMSE sum: {}".format(rmse_position + rmse_payload + rmse_velocity + rmse_quaternion))
+    else:
+        rmse_all = rmse_all_no_load(y_hat, y)
+        print("RMSE all: {}".format(rmse_all))
+        print("RMSE sum: {}".format(rmse_position + rmse_velocity + rmse_quaternion))
 
 
 def main():
 
-    output_dir = './output'
+    args_parser = ArgsParser()
+
+    output_dir = args_parser.args.output_dir
     os.makedirs(output_dir, exist_ok=True)
     best_epoch = fetch_best_epoch(output_dir)
 
@@ -70,7 +92,13 @@ def main():
     device = "cuda" if torch.cuda.is_available() else "cpu"
     print("Using device: {}".format(device))
 
-    model = SuperModelo(device)
+    models = {
+        "SuperModelo": SuperModelo(device), 
+        "AlphaModel": AlphaModel(output_dim=13, num_layers=3, dropout=0.0, device=device), 
+        "OmegaModel": OmegaModel(output_dim=13, num_layers=3, dropout=0.0, device=device)
+    }
+
+    model = models[args_parser.args.model]
     model = load_best_model(best_epoch, model, output_dir=output_dir, device=device)
 
     # Load the model
@@ -100,11 +128,11 @@ def main():
         total_y.append(y)
         total_y_hat.append(y_hat)
 
-    total_y = torch.stack(total_y, dim=0)
-    total_y_hat = torch.cat(total_y_hat, dim=0)
+    total_y = torch.stack(total_y, dim=0).to(device)
+    total_y_hat = torch.cat(total_y_hat, dim=0).to(device)
 
     # Compute the RMSE
-    compute_all_rmse(total_y_hat, total_y)
+    compute_all_rmse(total_y_hat, total_y, expand_y=False)
 
 
 if __name__ == "__main__":

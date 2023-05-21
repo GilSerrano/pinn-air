@@ -11,7 +11,7 @@ from vehicle_model import DiscreteMultirotor
 from mocap_dataset import MocapDatasetLoader
 
 # RMSE metrics and utils
-from utils import load_best_model, fetch_best_epoch
+from utils import load_best_model, fetch_best_epoch, ArgsParser
 from rmse import compute_all_rmse
 
 class Plot:
@@ -193,13 +193,14 @@ def plot_estimated_against_real(x, y, y_hat, time, time2, output_dir, y_physics=
     ld_args = {'gx_lbl': "$p_x^L$", 'gy_lbl': "$p_y^L$", 'gz_lbl': "$p_z^L$", 'ylabel': "Load Position (m)"}
     ld_plot.draw(output_dir, **ld_args)
 
-
 def main():
+
+    args_parser = ArgsParser()
 
     # -------------------------------------------------------------------
     # Plots for the regular test were we perform the recursive prediction
     # ------------------------------------------------------------------- 
-    output_dir = './output'
+    output_dir = args_parser.args.output_dir
     os.makedirs(output_dir, exist_ok=True)
     best_epoch = fetch_best_epoch(output_dir)
     
@@ -207,8 +208,13 @@ def main():
     device = "cuda" if torch.cuda.is_available() else "cpu"
     print("Using device: {}".format(device))
 
-    # model = SuperModelo(device)
-    model = AlphaModel(output_dim=13, num_layers=3, dropout=0.0, device=device)
+    models = {
+        "SuperModelo": SuperModelo(device), 
+        "AlphaModel": AlphaModel(output_dim=13, num_layers=3, dropout=0.0, device=device), 
+        "OmegaModel": OmegaModel(output_dim=13, num_layers=3, dropout=0.0, device=device)
+    }
+    
+    model = models[args_parser.args.model]
     model = load_best_model(best_epoch, model, output_dir=output_dir, device=device)
 
     target_time = 25
@@ -254,13 +260,12 @@ def main():
 
     plot_estimated_against_real(x, y, y_hat, time, time2, output_dir, y_physics=physics_model_result)
 
-
-    print(y_hat.shape)
-    print(y.shape)
-
     # Compute all the RMSE metrics for this particular trajectory
-    # compute_all_rmse(y_hat, y[None,...])
     compute_all_rmse(y_hat, y)
+
+    # Compute all the RMSE metrics for the physics model
+    print("\nRMSE physics model")
+    compute_all_rmse(y_hat, physics_model_result, expand_y=False, compute_load=False)
 
     # -------------------------------------------------------------------
     # Plots for the regular test were we perform 1-step-ahead prediction
@@ -303,12 +308,8 @@ def main():
     plot_estimated_against_real(x, y, predicted_state, time, time2, output_dir)
 
     # Compute all the RMSE metrics for this particular trajectory
+    print("------- 1-step-ahead prediction -------")
     compute_all_rmse(predicted_state, y)
-
-    # -------------------------------------------------------------------
-    # Plots of physics only, Network only and groundtruth
-    # -------------------------------------------------------------------
-
 
 
 if __name__ == "__main__":

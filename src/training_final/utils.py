@@ -1,5 +1,6 @@
 import os
 import torch
+from argparse import ArgumentParser
 
 def load_best_model(best_epoch, model, output_dir="./output", device="cpu"):
 
@@ -27,3 +28,16 @@ def fetch_best_epoch(output_dir="output/", file="best_epoch.txt"):
         best_epoch = f.readline().decode()
 
     return best_epoch
+
+class ArgsParser:
+
+    def __init__(self):    
+        # Create the parser
+        self.parser = ArgumentParser()
+
+        # Base options for training
+        train_group = self.parser.add_argument_group('training')
+        train_group.add_argument("--model", default="AlphaModel", type=str, help="Model to use.")
+        train_group.add_argument("--output_dir", default="./output", type=str, help="Output directory.")
+
+        self.args = self.parser.parse_args()
