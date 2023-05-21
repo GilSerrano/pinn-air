@@ -88,6 +88,8 @@ def main():
         print("Processing sample {}/{}".format(i, len(test_dataset)))
 
         x, y = test_dataset[i]
+        x = x.to(device)
+        y = y.to(device)
 
         Ts = 0.03
 
