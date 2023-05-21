@@ -207,7 +207,8 @@ def main():
     device = "cuda" if torch.cuda.is_available() else "cpu"
     print("Using device: {}".format(device))
 
-    model = SuperModelo(device)
+    # model = SuperModelo(device)
+    model = AlphaModel(output_dim=13, num_layers=3, dropout=0.0, device=device)
     model = load_best_model(best_epoch, model, output_dir=output_dir, device=device)
 
     target_time = 25
@@ -252,6 +253,10 @@ def main():
     physics_model_result = physics_model_result.to("cpu")
 
     plot_estimated_against_real(x, y, y_hat, time, time2, output_dir, y_physics=physics_model_result)
+
+
+    print(y_hat.shape)
+    print(y.shape)
 
     # Compute all the RMSE metrics for this particular trajectory
     compute_all_rmse(y_hat, y[None,...])
