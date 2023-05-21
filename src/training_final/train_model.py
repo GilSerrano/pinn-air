@@ -56,9 +56,9 @@ def main():
     # Create a custom output directory
     output = os.path.join(parser.args.output_path, "batch_size_" + str(parser.args.batch_size) + "_lr_" + str(parser.args.learning_rate) + "_wd_" + str(parser.args.weight_decay) + "_epochs_" + str(parser.args.num_epochs) + "_tfr_" + str(parser.args.teacher_forcing_ratio) + "_tfd_" + str(parser.args.teacher_forcing_decay) + "_da_" + str(parser.args.data_augmentation) + "_al_" + str(parser.args.augmentation_low) + "_ah_" + str(parser.args.augmentation_high) + "_use_attention_" + str(parser.args.use_attention) + "_seed_" + str(parser.args.seed)) + "/"
 
-    # Set the sampling rate and the mass of the vehicle
+    # Set the sampling rate and the mass of the vehicle (without slung load)
     Ts = 0.03       # seconds
-    mass = 1.0      # kilograms
+    mass = 1.35     # kilograms (Intel Aero RTF)
 
     # Set the time windows for the input/output data
     input_window = 50      # seconds
