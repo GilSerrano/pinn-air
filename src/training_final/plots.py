@@ -217,8 +217,8 @@ def main():
     # sampling time
     Ts = 0.03
     
-    # mass of the quadrotor
-    m = 1.0
+    # mass of the quadrotor (Intel Aero RTF)
+    m = 1.35
 
     physics_model = DiscreteMultirotor(Ts, m, device=device)
 
@@ -259,7 +259,8 @@ def main():
     print(y.shape)
 
     # Compute all the RMSE metrics for this particular trajectory
-    compute_all_rmse(y_hat, y[None,...])
+    # compute_all_rmse(y_hat, y[None,...])
+    compute_all_rmse(y_hat, y)
 
     # -------------------------------------------------------------------
     # Plots for the regular test were we perform 1-step-ahead prediction
@@ -302,7 +303,7 @@ def main():
     plot_estimated_against_real(x, y, predicted_state, time, time2, output_dir)
 
     # Compute all the RMSE metrics for this particular trajectory
-    compute_all_rmse(y_hat, y[None,...])
+    compute_all_rmse(predicted_state, y)
 
     # -------------------------------------------------------------------
     # Plots of physics only, Network only and groundtruth
