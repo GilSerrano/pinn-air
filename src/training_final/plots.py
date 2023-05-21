@@ -6,6 +6,7 @@ import matplotlib.pyplot as plt
 # Models
 from model import SuperModelo
 from alpha_model import AlphaModel
+from omega_model import OmegaModel
 from vehicle_model import DiscreteMultirotor
 from mocap_dataset import MocapDatasetLoader
 

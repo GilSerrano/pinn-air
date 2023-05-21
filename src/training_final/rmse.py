@@ -2,6 +2,8 @@
 import os
 import torch
 from model import SuperModelo
+from alpha_model import AlphaModel
+from omega_model import OmegaModel
 from mocap_dataset import MocapDatasetLoader
 from utils import load_best_model, fetch_best_epoch
 from math_utils import quaternion_multiply, quaternion_invert
