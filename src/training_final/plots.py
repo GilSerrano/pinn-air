@@ -270,7 +270,7 @@ def main():
     # -------------------------------------------------------------------
     # Plots for the regular test were we perform 1-step-ahead prediction
     # -------------------------------------------------------------------
-    output_dir = './output/1step' 
+    output_dir = os.path.join(output_dir, "1step") 
     os.makedirs(output_dir, exist_ok=True)
     target_time = 25
     input_time = 50
