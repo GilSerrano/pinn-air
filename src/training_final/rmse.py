@@ -104,7 +104,7 @@ def main():
     # Load the model
     target_time = 25
 
-    test_dataset = MocapDatasetLoader(input_window=50, output_window=target_time, stride=1, split="val", device="cuda")
+    test_dataset = MocapDatasetLoader(input_window=50, output_window=target_time, stride=1, split="test", device=device)
 
     # Acumulate the real and predicted values
     total_y = []
