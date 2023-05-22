@@ -186,8 +186,8 @@ class MocapDatasetLoader(data.Dataset):
         
         """
 
-        x = self.x[index]
-        y = self.y[index] 
+        x = self.x[index].to(self.device)
+        y = self.y[index].to(self.device)
         
         if self.data_augmentation:
             # set up new rng without fixed seed 
