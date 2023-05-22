@@ -7,7 +7,7 @@ def load_best_model(best_epoch, model, output_dir="./output", device="cpu"):
     checkpoint_path = os.path.join(output_dir, f"epoch_{best_epoch}_best_model.pt")
     print("Loading: {}".format(checkpoint_path))
 
-    checkpoint = torch.load(checkpoint_path)
+    checkpoint = torch.load(checkpoint_path, map_location=torch.device(device))
     model.load_state_dict(checkpoint['model'])
 
     return model.to(device)
