@@ -171,11 +171,11 @@ class AlphaModel(nn.Module):
 
     def compute_loss(self, y_hat, y, x, target_time, physics_model):
 
-        return self.position_error * position_error(y_hat, y, target_time) + \
-            self.velocity_error * velocity_error(y_hat, y, target_time) + \
-            self.position_error_payload * position_error_payload(y_hat, y, target_time) + \
+        return self.position_error * position_error(y_hat, y, target_time, decay_factor=0.0) + \
+            self.velocity_error * velocity_error(y_hat, y, target_time, decay_factor=0.0) + \
+            self.position_error_payload * position_error_payload(y_hat, y, target_time, decay_factor=0.0) + \
             self.continuity_last_input_first_output * continuity_last_input_first_output(y_hat, x) + \
             self.output_continuity * output_continuity(y_hat) + \
             self.quaternion_norm * quaternion_norm(y_hat) + \
-            self.quaternion_error * quaternion_error(y_hat, y, target_time) + \
-            self.physics_error * physics_error(y_hat, x, y, target_time, physics_model)
+            self.quaternion_error * quaternion_error(y_hat, y, target_time, decay_factor=0.0) + \
+            self.physics_error * physics_error(y_hat, x, y, target_time, physics_model, decay_factor=0.1)

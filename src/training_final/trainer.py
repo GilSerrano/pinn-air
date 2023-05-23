@@ -51,6 +51,7 @@ class Trainer:
         # Store the best parameters
         self.best_epoch = 0
 
+
     def train_multiple_epochs(self, num_epochs):
         """
         Implement this function to train the model for multiple epochs
