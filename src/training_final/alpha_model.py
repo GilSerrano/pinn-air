@@ -178,4 +178,4 @@ class AlphaModel(nn.Module):
             self.output_continuity * output_continuity(y_hat) + \
             self.quaternion_norm * quaternion_norm(y_hat) + \
             self.quaternion_error * quaternion_error(y_hat, y, target_time, decay_factor=0.0) + \
-            self.physics_error * physics_error(y_hat, x, y, target_time, physics_model, decay_factor=0.1)
+            self.physics_error * physics_error(y_hat, x, y, target_time, physics_model, decay_factor=0.01)
