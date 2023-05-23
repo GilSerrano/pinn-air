@@ -13,4 +13,4 @@ python train_model.py --teacher_forcing_ratio 0.5 --teacher_forcing_decay 0.07 -
 python train_model.py --dropout 0.0 --data_augmentation --output_path output_13
 
 python train_model.py --dropout 0.0 --batch_size 16 --num_epochs 1000 --learning_rate 1E-5 --data_augmentation --teacher_forcing_ratio 0.5 --teacher_forcing_decay 0.10 --physics_error 1.0 --output_path output_18
-python train_model.py --dropout 0.0 --batch_size 16 --learning_rate 1E-5 --teacher_forcing_ratio 0.5 --teacher_forcing_decay 0.07 --physics_error 1.0 --output_path output_19
+python train_model.py --dropout 0.0 --batch_size 16 --learning_rate 1E-5 --teacher_forcing_ratio 0.5 --teacher_forcing_decay 0.10 --physics_error 1.0 --output_path output_19
