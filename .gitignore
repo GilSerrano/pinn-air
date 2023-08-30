@@ -46,3 +46,13 @@ log/
 *.npz
 
 output*/
+
+*.vscode/*
+*/dataset/*
+*/test_output/*
+
+output*/
+
+*.vscode/*
+*/dataset/*
+*/test_output/*
