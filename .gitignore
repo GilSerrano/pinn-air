@@ -29,7 +29,7 @@ _build/
 
 # IDE
 **/.idea/
-**/.vscode/.**
+**.vscode/.**
 
 # Isaac-Sim packman
 _isaac_sim
