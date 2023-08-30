@@ -22,6 +22,8 @@ This work was developed by the following team of researchers:
 * [José Gomes](https://github.com/JoseGomesJPG), under the supervision of <u>Prof. Alexandre Bernardino</u>
 * [João Pinto](https://github.com/jschpinto), under the supervision of <u>Prof. Bruno Guerreiro</u> and <u>Prof. Rita Cunha</u>
 
+The authors gratefully acknowledge Chrysoula Zerva and André F. T. Martins for their suggestions to improve the quality of this work.
+
 ## Project Sponsors
 - Institute for Systems and Robotics (ISR), a research unit of the Laboratory of Robotics and Engineering Systems (LARSyS)
 - Instituto Superior Técnico, Universidade de Lisboa
