@@ -4,8 +4,6 @@
 </p>
 In this work, we explore the use of physics-informed neural networks to learn an end-to-end model of the multirotor-slung-load system and, at a given time, estimate a sequence of the future system states. To this end, a sequence of observations of states and control inputs of the system is fed into a set of fully connected layers, which encodes the input data into a more meaningful representation. An LSTM encoder-decoder with an attention mechanism is then used to capture the dynamics of the system and another set of fully connected layers is employed to represent the decoded sequence in the original state space. To guarantee the cohesiveness between the multiple predicted states of the system and restrict the space of admissible predictions, we propose the use of a physics-based loss term in the loss function, which includes a discretized physical model derived from first principles, together with slack variables. To train the model, a dataset using a real-world quadrotor carrying a slung load was curated and is made available. Prediction results and ablations studies are presented and corroborate the feasibility of the approach. The proposed method outperforms both the first principles physical model and a comparable neural network model trained without the physics regularization proposed.
 
-<b>Code and dataset will be released upon publication of the associated paper.</b>
-
 PINN-Air and the associated dataset is released under the [BSD-3 License](LICENSE).
 
 ## Citation
