@@ -26,6 +26,7 @@ Supervised by:
 
 - Prof. Rita Cunha
 - Prof. Bruno Guerreiro
+- Prof. Alexandre Bernardino
 
 The authors gratefully acknowledge Chrysoula Zerva and André F. T. Martins for their suggestions to improve the quality of this work.
 
