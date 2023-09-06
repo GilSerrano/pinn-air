@@ -17,10 +17,15 @@ Coming soon
 ## Developer Team
 This work was developed by the following team of researchers:
 
-* [Gil Serrano](https://github.com/GilSerrano), under the supervision of <u>Prof. Bruno Guerreiro</u> and <u>Prof. Rita Cunha</u>
-* [Marcelo Jacinto](https://github.com/MarceloJacinto), under the supervision of <u>Prof. Rita Cunha</u>
-* [José Gomes](https://github.com/JoseGomesJPG), under the supervision of <u>Prof. Alexandre Bernardino</u>
-* [João Pinto](https://github.com/jschpinto), under the supervision of <u>Prof. Bruno Guerreiro</u> and <u>Prof. Rita Cunha</u>
+* [Gil Serrano](https://github.com/GilSerrano)
+* [Marcelo Jacinto](https://github.com/MarceloJacinto)
+* [José Gomes](https://github.com/JoseGomesJPG)
+* [João Pinto](https://github.com/jschpinto)
+
+Supervised by:
+
+- Prof. Rita Cunha
+- Prof. Bruno Guerreiro
 
 The authors gratefully acknowledge Chrysoula Zerva and André F. T. Martins for their suggestions to improve the quality of this work.
 
