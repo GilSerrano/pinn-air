@@ -1,4 +1,4 @@
-<h1>PINN-Air: Physics-Informed Neural Network for Multirotor Slung Load Systems Modeling</h1>
+<h1>Physics-Informed Neural Network for Multirotor Slung Load Systems Modeling</h1>
 <p float="left" align="center">
   <img src="docs/figures/drone_load_path_cropped.png" width="700" align="center"/>   
 </p>
