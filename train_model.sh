@@ -26,3 +26,6 @@ python -m pinn_air.stats_n_plots.plot_error_mean_against_baseline --output_dir t
 
 # Generate predictions for the test set of the PINN-air model and save them to a .mat file
 python -m pinn_air.stats_n_plots.save2mat --model PINNAirModel --output_dir trained_models/pinn_air
+
+# Generate inference time statistics
+python -m pinn_air.stats_n_plots.inference_time --model PINNAirModel --output_dir trained_models/pinn_air
