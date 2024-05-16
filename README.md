@@ -10,7 +10,14 @@ PINN-Air and the associated dataset is released under the [BSD-3 License](LICENS
 ## Citation
 If you use PINN-Air or the associated dataset in your research, please cite:
 ```
-Coming soon
+@misc{2024pinnair,
+      title={Physics-Informed Neural Network for Multirotor Slung Load Systems Modeling}, 
+      author={Gil Serrano and Marcelo Jacinto and Jose Ribeiro-Gomes and Joao Pinto and Bruno J. Guerreiro and Alexandre Bernardino and Rita Cunha},
+      year={2024},
+      eprint={2405.09428},
+      archivePrefix={arXiv},
+      primaryClass={cs.RO}
+}
 ```
 
 ## Training the Model and Generating Statistics
