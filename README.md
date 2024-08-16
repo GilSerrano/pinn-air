@@ -10,13 +10,16 @@ PINN-Air and the associated dataset is released under the [BSD-3 License](LICENS
 ## Citation
 If you use PINN-Air or the associated dataset in your research, please cite:
 ```
-@misc{2024pinnair,
-      title={Physics-Informed Neural Network for Multirotor Slung Load Systems Modeling}, 
-      author={Gil Serrano and Marcelo Jacinto and Jose Ribeiro-Gomes and Joao Pinto and Bruno J. Guerreiro and Alexandre Bernardino and Rita Cunha},
-      year={2024},
-      eprint={2405.09428},
-      archivePrefix={arXiv},
-      primaryClass={cs.RO}
+@INPROCEEDINGS{10610582,
+  author={Serrano, Gil and Jacinto, Marcelo and Ribeiro-Gomes, José and Pinto, João and Guerreiro, Bruno J. and Bernardino, Alexandre and Cunha, Rita},
+  booktitle={2024 IEEE International Conference on Robotics and Automation (ICRA)}, 
+  title={Physics-Informed Neural Network for Multirotor Slung Load Systems Modeling}, 
+  year={2024},
+  volume={},
+  number={},
+  pages={12592-12598},
+  keywords={Training;Neural networks;Transportation;Training data;Predictive models;Systems modeling;Vehicle dynamics},
+  doi={10.1109/ICRA57147.2024.10610582}
 }
 ```
 
